@@ -1,5 +1,5 @@
-set (DECOMP_SUBDIR "decompile")
-set (COMP_SUBDIR   "compile")
+set (DECOMP_SUBDIR "from_xml")
+set (COMP_SUBDIR   "to_xml")
 
 set (COMP_YACC_FILE   "${CMAKE_CURRENT_SOURCE_DIR}/${COMP_SUBDIR}/parser.y")
 set (COMP_YACC_FILE_C "${CMAKE_CURRENT_BINARY_DIR}/gen/parser.tab.c")
@@ -54,17 +54,23 @@ add_library(x4c-util OBJECT
     util/util.c
 )
 
+if (MINGW)
+    include_directories("contrib/talloc")
+    set (TALLOC_SRC "contrib/talloc/talloc.c")
+endif()
+
 add_executable(x4c 
     main.c
     element_handler.c
-    decompile/decomp_main.c
-    decompile/decompile.c
-    decompile/xs_context.c
-    decompile/util.c
-    compile/ast.c
-    compile/comp_main.c
+    from_xml/decomp_main.c
+    from_xml/decompile.c
+    from_xml/xs_context.c
+    from_xml/util.c
+    to_xml/ast.c
+    to_xml/comp_main.c
     "${COMP_YACC_FILE_C}"
     "${COMP_LEX_FILE_C}"
+    ${TALLOC_SRC}
 )
 
 include_directories(
@@ -88,11 +94,14 @@ endif()
 
 target_link_libraries(x4c
     ${CMAKE_THREAD_LIBS_INIT}
-    ${TALLOC_LIBRARIES}
     ${EXPAT_LIBRARIES}
     bstring
     x4c-util
+    -lncurses
 )
+if (NOT MINGW)
+    target_link_libraries(x4c ${TALLOC_LIBRARIES})
+endif()
 
 if (USE_JEMALLOC)
    target_link_libraries(x4c -ljemalloc -ldl)

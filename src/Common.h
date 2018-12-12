@@ -52,7 +52,8 @@ typedef signed long long int ssize_t;
 #  define quick_exit(a) _Exit(a)
 #  undef mkdir
 #  define mkdir(PATH, MODE) mkdir(PATH)
-extern char * basename(char *path);
+extern char *basename(char *path);
+extern char program_invocation_short_name[2048];
 #else
 #  include <pthread.h>
 #  include <sys/socket.h>

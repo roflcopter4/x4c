@@ -79,14 +79,25 @@ my_XML_DefaultHandler(void *vdata, const XML_Char *s, int len)
                                                      data->cur_ctx->depth + 1);
                 ll_append(ctx->parent->list, ctx);
         } else {
+                bool graph = false;
                 for (int i = 0; i < len; ++i) {
-                        if (isgraph(s[i])) {
+                        if (!isprint(s[i])) {
                                 /* fprintf(stderr, "Got printable chars in default handler: \""); */
-                                fwrite(s+i, 1, len-i, stderr);
-                                fputs("\"\n", stderr);
+                                /* fwrite(s+i, 1, len-i, stderr); */
+                                /* fputs("\"\n", stderr); */
                                 return;
                         }
+                        if (isgraph(s[i]))
+                                graph = true;
                 }
+                if (!graph)
+                        return;
+                xs_context *ctx = xs_context_create(data->cur_ctx, XS_UNKNOWN_CONTENT,
+                                                    &default_debug_name, NULL,
+                                                    data->cur_ctx->depth + 1);
+                ctx->unknown_text = b_fromblk(s, len);
+                talloc_steal(ctx, ctx->unknown_text);
+                ll_append(ctx->parent->list, ctx);
         }
 }
 
@@ -157,3 +168,4 @@ my_XML_EndDoctypeDeclHandler(UNUSED void *data)
 {
         PRINTL("Got end of doctypeDecl.\n");
 }
+

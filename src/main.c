@@ -26,9 +26,9 @@ main(int argc, char **argv)
 {
         if (argc == 1)
                 show_help(1);
+
         int ret = handle_options(argc, argv);
         argv   += ret;
-        eprintf("Using fname %s\n", out_fname);
         
         switch (operation) {
         case 1:  decompile_main(argv[1], out_fname); break;

@@ -10,7 +10,7 @@
    char program_invocation_short_name[2048];
    __attribute__((__constructor__)) void setpisn(void)
   {
-          strcpy(program_invocation_short_name, "thing");
+          strcpy(program_invocation_short_name, "x4c");
   }
 #endif
 

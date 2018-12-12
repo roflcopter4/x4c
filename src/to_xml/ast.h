@@ -17,6 +17,7 @@ P99_DECLARE_STRUCT(ast_node);
 P99_DECLARE_STRUCT(ast_atom);
 
 P99_DECLARE_ENUM(ast_node_types,
+        NODE_UNKNOWN,
         NODE_BLANK_LINE,
         NODE_BLOCK,
         NODE_COMMENT,
@@ -48,6 +49,7 @@ struct ast_data {
                 FILE *fp;
         } *fp_wrap;
 
+        bstring  *filename;
         uint32_t      mask;
         uint32_t      column;
 };
@@ -136,6 +138,7 @@ ast_node * ast_node_create(ast_data *data, enum ast_node_types type);
 extern void new_blank_line(ast_data *data);
 extern void new_unimpl_statement(ast_data *data, bstring *id);
 extern void new_unimpl_subexpr(ast_data *data, bstring *id, bstring *statement);
+extern void new_unknown_statement(ast_data *data, bstring *statement);
 extern void new_block(ast_data *data);
 extern void new_block_comment(ast_data *data, bstring *text);
 extern void new_assignment_statement(ast_data *data, bstring *var, bstring *expr, enum ast_assignment_type type);

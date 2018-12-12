@@ -15,6 +15,7 @@
 extern void yyerror(yyscan_t scanner, ast_data *data, char const *msg);
 extern void cat_relop(bstring *str, int op);
 static void fix_line_comment(bstring *bstr);
+static bstring * handle_unary_op(const int op, bstring *s2);
 
 #define B_CONCAT(b, s)                                 \
         do {                                           \
@@ -56,49 +57,65 @@ static void fix_line_comment(bstring *bstr);
 %token TOK_REVERSED "reversed"
 %token TOK_TABLE    "table"
 %token BLANK_LINE
+%token <int> TOK_TYPEOF
 
 
+%token <bstring *> UNKNOWN_XML_CONTENT "**"
 %token <bstring *> BARE_LINE_COMMENT "lone_line_comment"
 %token <bstring *> BLOCK_COMMENT     "block_comment"
-%token <bstring *> DISTANCE          "distance value"
 %token <bstring *> LINE_COMMENT      "line_comment"
 %token <bstring *> TIME_VAL          "time value"
 %token <bstring *> TOK_CONST         "global_constant"
 %token <bstring *> TOK_EMPTY_ARRAY   "[]"
 %token <bstring *> TOK_SQRT          "sqrt"
+%token <bstring *> TOK_DISTANCE      "distance value"
 %token <bstring *> VARIABLE          "$variable"
+%token <bstring *> TOK_CREDITS       "credit value"
+%token <bstring *> TOK_DEGREES       "degree value"
+
+%token TOK_CR      "Cr"
+%token TOK_CT      "ct"
+%token TOK_DEG     "Deg"
+%token TOK_KM      "km"
+%token TOK_MINUTES "min"
+%token TOK_MS      "ms"
 
 %token <int> '+' '-' '*' '/' '%' '^' '$' '!' '(' ')' '{' '}' ';' '.' '@' '[' ']' '?' '=' ',' ':'
 
-%type <bstring *>    assignment_statement literal identifier_clash
+%type <bstring *>    assignment_statement literal identifier_clash expression_list
                      additive_expression multiplicative_expression
                      unary_expression assignment_expression identifier_terminal
                      debug_print_statement relational_expression terminal
                      expression primary_expression builtin_function 
                      unary_expression2 relational_expression2 primary_expression2
                      identifier additive_expression2 multiplicative_expression2
-                     struct_assignment table_assignment
-%type <int>          unary_op multiplicative_op additive_op reversed inexplicable_f
+                     struct_assignment table_assignment table_expression
+%type <int>          unary_op multiplicative_op additive_op reversed
+%type <const char *> inexplicable_f
 %type <const char *> relational_op logical_op
 
 /* These associations are required to avoid conflicts. */
 %left ','
-%precedence ':'
-%precedence '='
+%precedence '.'
+/* %precedence ':' */
+%precedence "else"
+/* %precedence '=' */
+/* %nonassoc   "if" "else" "then" */
 
 %token OP_AND OP_OR OP_EQ OP_NE OP_GE OP_LE '<' '>'
 %token <bstring *> TOK_MAX TOK_MIN
 
 %define api.value.type union
-%token <bstring *> INTEGER        "number"
-%token <bstring *> FLOAT          "floating point number"
+%token <bstring *> TOK_INTEGER    "number"
+%token <bstring *> TOK_FLOAT      "floating point number"
 %token <bstring *> STRING_LITERAL "string literal"
 %token <bstring *> STRING_UNIMPL  "string"
 %token <bstring *> IDENTIFIER     "identifier"
 %token <bstring *> XML_IDENTIFIER "xml identifier"
 <bstring *> BSTRING
-<char *>    CSTR
-<int>       CHAR
+<char *>    TOK_CSTR
+<int>       TOK_CHAR
+<int>       TOK_VAL
 
 %start statement_list;
 
@@ -127,6 +144,7 @@ statement_type
 	| unimplemented_statement chance ';'
 	| assignment_statement    chance ';'
 	| debug_print_statement   chance ';'
+	| unknown_statement
 	;
 
 compound_statement
@@ -158,10 +176,13 @@ unimplemented_expression
 	;
 
 unimplemented_subexpr 
-	: IDENTIFIER     '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
-	| XML_IDENTIFIER '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
-	| TOK_CHANCE     '=' STRING_UNIMPL  { new_unimpl_subexpr(data, b_fromlit("chance"), $3); }
+	: IDENTIFIER       '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
+	| XML_IDENTIFIER   '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
 	| identifier_clash '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
+	;
+
+unknown_statement
+	: "**" { new_unknown_statement(data, $1); }
 	;
 
 /*======================================================================================*/
@@ -171,15 +192,19 @@ assignment_statement
 	: "let" identifier                                { new_assignment_statement(data, $2, NULL, ASSIGNMENT_NORMAL); }
 	| "let" identifier '=' assignment_expression      { new_assignment_statement(data, $2, $4, ASSIGNMENT_NORMAL); }
 	| "let" identifier "=>" '{' struct_assignment '}' { new_assignment_statement(data, $2, $5, ASSIGNMENT_SPECIAL); }
-	| "let" identifier '=' "table" '[' table_assignment ']' { new_assignment_statement(data, $2, b_sprintf("table[ %s ]", $6), ASSIGNMENT_NORMAL); b_free($6); }
+	| "let" identifier '=' table_expression { new_assignment_statement(data, $2, $4, ASSIGNMENT_NORMAL); }
 	| "add" identifier                                { new_assignment_statement(data, $2, NULL, ASSIGNMENT_ADD); }
 	;
 
 assignment_expression
-	: "if" '(' expression ')' "then" expression "else" expression
-		{ $$ = b_sprintf("if (%s) then %s else %s", $3, $6, $8); b_destroy_all($3, $6, $8); }
-	/* | "table" '[' expression ']' { $$ = b_sprintf("table[%s]", $3); b_free($3); } */
-	| expression { $$ = $1; }
+	/* : "if" expression "then" expression "else" expression */
+		/* { $$ = b_sprintf("if (%s) then %s else %s", $2, $4, $6); b_destroy_all($2, $4, $6); } */
+	: expression { $$ = $1; }
+	;
+
+table_expression
+	: "table" "[]" { $$ = b_fromlit("table[]"); }
+	| "table" '[' table_assignment ']' { $$ = b_sprintf("table[%s]", $3); b_free($3); }
 	;
 
 table_assignment
@@ -230,11 +255,17 @@ simple_statement
 /*======================================================================================*/
 /* Expressions */
 
+expression_list
+	: expression_list ',' expression { $$ = $1; b_catchar($$, ','); B_CONCAT($$, $3); b_free($3); }
+	| expression
+	;
+
 expression
 	: builtin_function '(' expression ')' { $$ = $1; b_sprintfa($$, "(%s)", $3); }
-	/* | expression ',' primary_expression { $$ = $1; if (add_comma) b_catchar($$, ','); B_CONCAT($$, $3); b_free($3); } */
-	| expression ',' primary_expression { $$ = $1; b_catchar($$, ','); B_CONCAT($$, $3); b_free($3); }
 	| expression '.' primary_expression { $$ = $1; b_catchar($$, '.'); b_concat($$, $3); b_free($3); }
+	/* | "if" primary_expression "then" primary_expression "else" primary_expression */
+	| "if" expression "then" expression "else" expression
+		{ $$ = b_sprintf("if (%s) then %s else %s", $2, $4, $6); b_destroy_all($2, $4, $6); }
 	| primary_expression                { $$ = $1; }
 	;
 
@@ -263,8 +294,7 @@ multiplicative_expression
 	;
 
 unary_expression
-	: unary_op unary_expression
-		{ if ($1 == '!') { $$ = b_sprintf("not %s", $2); b_free($2); } else { b_insert_char($2, 0, $1); $$ = $2; } }
+	: unary_op unary_expression { $$ = handle_unary_op($1, $2); }
 	| terminal { $$ = $1; }
 	| literal  { $$ = $1; }
 	;
@@ -301,8 +331,7 @@ multiplicative_expression2
 	;
 
 unary_expression2
-	: unary_op unary_expression2
-		{ if ($1 == '!') { $$ = b_sprintf("not %s", $2); b_free($2); } else { b_insert_char($2, 0, $1); $$ = $2; } }
+	: unary_op unary_expression2 { $$ = handle_unary_op($1, $2); }
 	| terminal { $$ = $1; }
 	;
 
@@ -310,20 +339,22 @@ unary_expression2
 /* Tokens */
 
 terminal
-	: '(' expression ')' inexplicable_f  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); if ($4) b_catchar($$, 'f'); }
-	| '[' expression ']'  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); }
-	| '{' expression '}'  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); }
+	: '(' expression ')' inexplicable_f  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); if ($4) b_catcstr($$, $4); }
+	| '[' expression_list ']'  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); }
+	| '{' expression_list '}'  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); }
 	| identifier_terminal { $$ = $1; }
 	| terminal '?'        { $$ = $1; b_catchar($$, '?'); }
 	;
 
 literal
-	: STRING_LITERAL     { $$ = $1; }
-	| FLOAT              { $$ = $1; }
-	| INTEGER            { $$ = $1; }
+	: STRING_LITERAL
+	| TOK_FLOAT
+	| TOK_INTEGER
 	| TOK_NULL           { $$ = NULL; }
-	| DISTANCE
+	| TOK_DISTANCE
+	| TOK_DEGREES
 	| TIME_VAL
+	| TOK_CREDITS
 	| TOK_EMPTY_ARRAY
 	;
 
@@ -334,12 +365,21 @@ identifier_terminal
 	| identifier_clash
 	;
 
-inexplicable_f : 'f' { $$ = 1; } | %empty { $$ = 0; } ;
-identifier_clash: TOK_MIN | TOK_MAX ; 
+identifier_clash
+	: TOK_MIN
+	| TOK_MAX
+	| TOK_CHANCE { $$ = b_fromlit("chance"); }
+	| TOK_BREAK  { $$ = b_fromlit("break"); }
+	| TOK_RETURN { $$ = b_fromlit("return"); }
+	; 
+
+inexplicable_f : 'f' { $$ = "f"; } | 'i' { $$ = "i"; } | 's' { $$ = "s"; } | 'm' { $$ = "m"; }
+	       | "ct" { $$ = "ct"; } | "km" { $$ = "km"; } | "Cr" { $$ = "Cr"; } | "ms" { $$ = "ms"; }
+	       | "min" { $$ = "min"; } | %empty { $$ = NULL; } ;
 
 builtin_function  : TOK_SQRT ;
 additive_op       : '+' | '-' ;
-unary_op          : '+' | '-' | '@' | '!' { $$ = '!'; } ;
+unary_op          : '+' | '-' | '@' | '!' { $$ = '!'; } | TOK_TYPEOF ;
 multiplicative_op : '^' | '*' | '/' | '%' ;
 
 relational_op     : OP_EQ  { $$ = "=="; }  | OP_NE { $$ = "!="; }
@@ -364,6 +404,23 @@ fix_line_comment(bstring *bstr)
         bstr->slen -= i - 1;
         bstr->data[bstr->slen - 1] = ' ';
         bstr->data[bstr->slen]     = '\0';
+}
+
+static bstring *
+handle_unary_op(const int op, bstring *s2)
+{
+	bstring *ret;
+	if (op == '!') {
+		ret = b_sprintf("not %s", s2);
+		b_free(s2); 
+	} else if (op == TOK_TYPEOF) {
+		ret = b_sprintf("typeof %s", s2);
+		b_free(s2); 
+	} else {
+		b_insert_char(s2, 0, op);
+		ret = s2; 
+	}
+	return ret;
 }
 
 // vim: noexpandtab tw=0

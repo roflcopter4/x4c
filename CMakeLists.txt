@@ -23,11 +23,13 @@ option (USE_JEMALLOC "")
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 find_package (Threads REQUIRED)
-find_package (Talloc REQUIRED)
 find_package (EXPAT REQUIRED)
 find_package (BISON REQUIRED)
 find_package (FLEX REQUIRED)
-
+if (NOT MINGW)
+    find_package (Talloc REQUIRED)
+endif()
+    
 CHECK_SYMBOL_EXISTS (mkostemps      "stdlib.h"   HAVE_MKOSTEMPS)
 CHECK_SYMBOL_EXISTS (reallocarray   "stdlib.h"   HAVE_REALLOCARRAY)
 CHECK_SYMBOL_EXISTS (asprintf       "stdio.h"    HAVE_ASPRINTF)

@@ -20,19 +20,17 @@ ast_data_create_(const void *src, const enum ast_data_types type)
 
         switch (type) {
         case COMPDATA_FILE:
-                data->fp_wrap->fp  = (FILE *)src;
+                data->fp_wrap->fp = (FILE *)src;
+                data->filename    = b_fromlit("<STDIN>");
                 break;
         case COMPDATA_FILENAME:
-                data->fp_wrap->fp  = fopen((const char *)src, "rb");
-                break;
-        case COMPDATA_STRING: {
-                const bstring *str = src;
-                data->fp_wrap->fp  = fmemopen(str->data, str->slen, "rb");
+                data->fp_wrap->fp = fopen((const char *)src, "rb");
+                data->filename    = b_fromcstr(src);
                 break;
         default:
                 abort();
         }
-        }
+        talloc_steal(data, data->filename);
 
         if (!data->fp_wrap->fp) {
                 warn("Error: Null file");
@@ -85,6 +83,14 @@ new_unimpl_subexpr(ast_data *data, bstring *id, bstring *statement)
         talloc_steal(atom, id);
         talloc_steal(atom, statement);
         genlist_append(data->cur->unimpl.list, atom);
+}
+
+void
+new_unknown_statement(ast_data *data, bstring *statement)
+{
+        ast_node *node = ast_node_create(data, NODE_UNKNOWN);
+        node->string   = statement;
+        talloc_steal(node, node->string);
 }
 
 /*======================================================================================*/

@@ -8,8 +8,8 @@
 #endif
 
 #define MK_BSTRING      b_fromblk(yytext, yyleng)
-#define SETSTR          (yylval->CSTR = yytext)
-#define SETCHAR         (yylval->CHAR = yytext[0])
+#define SETSTR          (yylval->TOK_CSTR = yytext)
+#define SETCHAR         (yylval->TOK_CHAR = yytext[0])
 #define UPDATE_COLUMN() (yyextra->column += yyleng)
 
 #define SHUT_UP 1
@@ -19,7 +19,8 @@
 #  define ECHON do { ECHO; putchar('\n'); UPDATE_COLUMN(); } while (0)
 #endif
 
-static bstring *handle_block_comment(yyscan_t scanner);
+static bstring *handle_block_comment(yyscan_t scanner, ast_data *data);
+static bstring *handle_unknown_content(const char *txt, unsigned len);
 %}
 
 %option reentrant bison-bridge noyywrap yylineno
@@ -41,46 +42,61 @@ blkc "/*"()
 ^{ws}*{nl}              { ECHON; return BLANK_LINE; }
 ^{ws}*"//".*"\r\n"	{ ECHON; yylval->BSTRING = b_fromblk(yytext, yyleng-2); return BARE_LINE_COMMENT; }
 ^{ws}*"//".*"\n"	{ ECHON; yylval->BSTRING = b_fromblk(yytext, yyleng-1); return BARE_LINE_COMMENT; }
+^{ws}*"**".*		{ ECHON; yylval->BSTRING = handle_unknown_content(yytext, yyleng); return UNKNOWN_XML_CONTENT; }
 "//".*"\r\n"		{ ECHON; yylval->BSTRING = b_fromblk(yytext+2, yyleng-4); return LINE_COMMENT; }
 "//".*"\n"		{ ECHON; yylval->BSTRING = b_fromblk(yytext+2, yyleng-3); return LINE_COMMENT; }
-"/*"			{ ECHON; yylval->BSTRING = handle_block_comment(yyscanner); return BLOCK_COMMENT; }
+"/*"			{ ECHON; yylval->BSTRING = handle_block_comment(yyscanner, yyextra); return BLOCK_COMMENT; }
 
 {ws}+			{ UPDATE_COLUMN(); }
 
 {int}"min"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
+{int}"ms"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
 {int}"s"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
-{int}"m"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return DISTANCE; }
-{int}"km"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return DISTANCE; }
-{int}*"."{int}+"f"?	{ ECHON; yylval->FLOAT          = MK_BSTRING; return FLOAT; }
-{int}			{ ECHON; yylval->INTEGER        = MK_BSTRING; return INTEGER; }
+{int}"m"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DISTANCE; }
+{int}"km"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DISTANCE; }
+{int}"Cr"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_CREDITS; }
+{int}"Deg"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DEGREES; }
+{int}+"."{int}*"f"?	{ ECHON; yylval->TOK_FLOAT      = MK_BSTRING; return TOK_FLOAT; }
+{int}f			{ ECHON; yylval->TOK_FLOAT      = MK_BSTRING; return TOK_FLOAT; }
+{int}			{ ECHON; yylval->TOK_INTEGER    = MK_BSTRING; return TOK_INTEGER; }
 {Dstring}		{ ECHON; yylval->STRING_UNIMPL  = MK_BSTRING; return STRING_UNIMPL; }
 {Sstring}		{ ECHON; yylval->STRING_LITERAL = MK_BSTRING; return STRING_LITERAL; }
 
+"min"			{ ECHON; SETSTR;  return TOK_MIN; }
+"ms"			{ ECHON; SETSTR;  return TOK_MS; }
+"km"			{ ECHON; SETSTR;  return TOK_KM; }
+"Cr"			{ ECHON; SETSTR;  return TOK_CR; }
+"Deg"			{ ECHON; SETSTR;  return TOK_DEG; }
+"ct"			{ ECHON; SETSTR;  return TOK_CT; }
+"m"			{ ECHON; SETSTR;  return 'm'; }
 "f"			{ ECHON; SETCHAR; return 'f'; }
+"i"			{ ECHON; SETCHAR; return 'i'; }
+"s"			{ ECHON; SETCHAR; return 's'; }
 
-"let"			{ ECHON; return TOK_LET; }
-"if"			{ ECHON; return TOK_IF; }
-"elsif"			{ ECHON; return TOK_ELSIF; }
-"else"			{ ECHON; return TOK_ELSE; }
-"while"			{ ECHON; return TOK_WHILE; }
-"then"			{ ECHON; return TOK_THEN; }
-"NULL"			{ ECHON; return TOK_NULL; }
+"null"			{ ECHON; return TOK_NULL; }
+"add"			{ ECHON; return TOK_ADD; }
+"break"			{ ECHON; return TOK_BREAK; }
 "chance"		{ ECHON; return TOK_CHANCE; }
 "debug"			{ ECHON; return TOK_DEBUG; }
-"return"		{ ECHON; return TOK_RETURN; }
-"break"			{ ECHON; return TOK_BREAK; }
-"undef"			{ ECHON; return TOK_UNDEF; }
+"else"			{ ECHON; return TOK_ELSE; }
+"elsif"			{ ECHON; return TOK_ELSIF; }
 "for"			{ ECHON; return TOK_FOR; }
+"if"			{ ECHON; return TOK_IF; }
 "in"			{ ECHON; return TOK_IN; }
+"let"			{ ECHON; return TOK_LET; }
+"return"		{ ECHON; return TOK_RETURN; }
 "reversed"		{ ECHON; return TOK_REVERSED; }
-"add"			{ ECHON; return TOK_ADD; }
 "table"			{ ECHON; return TOK_TABLE; }
+"then"			{ ECHON; return TOK_THEN; }
+"undef"			{ ECHON; return TOK_UNDEF; }
+"while"			{ ECHON; return TOK_WHILE; }
 
 "[]"			{ ECHON; yylval->BSTRING    = MK_BSTRING; return TOK_EMPTY_ARRAY; }
 "event"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_CONST; }
 "this"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_CONST; }
 "error"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_CONST; }
 "sqrt"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_SQRT; }
+"typeof"		{ ECHON; yylval->TOK_VAL    = TOK_TYPEOF; return TOK_TYPEOF; }
 
 "$"{id}			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return VARIABLE; }
 {xmlid}			{ 
@@ -107,28 +123,28 @@ blkc "/*"()
 "||"			{ ECHON; SETSTR; return OP_OR; }
 "=>"			{ ECHON; SETSTR; return OP_ARROW; }
 
-":"			{ ECHON; SETCHAR; return ':'; }
-"<"			{ ECHON; SETCHAR; return '<'; }
-">"			{ ECHON; SETCHAR; return '>'; }
-"."			{ ECHON; SETCHAR; return '.'; }
 "!"			{ ECHON; SETCHAR; return '!'; }
-"-"			{ ECHON; SETCHAR; return '-'; }
-"+"			{ ECHON; SETCHAR; return '+'; }
-"*"			{ ECHON; SETCHAR; return '*'; }
-"/"			{ ECHON; SETCHAR; return '/'; }
-"%"			{ ECHON; SETCHAR; return '%'; }
-","			{ ECHON; SETCHAR; return ','; }
-"="			{ ECHON; SETCHAR; return '='; }
-"{"			{ ECHON; SETCHAR; return '{'; }
-"}"			{ ECHON; SETCHAR; return '}'; }
 "$"			{ ECHON; SETCHAR; return '$'; }
-"@"			{ ECHON; SETCHAR; return '@'; }
-"?"			{ ECHON; SETCHAR; return '?'; }
-";"			{ ECHON; SETCHAR; return ';'; }
+"%"			{ ECHON; SETCHAR; return '%'; }
 "("			{ ECHON; SETCHAR; return '('; }
 ")"			{ ECHON; SETCHAR; return ')'; }
+"*"			{ ECHON; SETCHAR; return '*'; }
+"+"			{ ECHON; SETCHAR; return '+'; }
+","			{ ECHON; SETCHAR; return ','; }
+"-"			{ ECHON; SETCHAR; return '-'; }
+"."			{ ECHON; SETCHAR; return '.'; }
+"/"			{ ECHON; SETCHAR; return '/'; }
+":"			{ ECHON; SETCHAR; return ':'; }
+";"			{ ECHON; SETCHAR; return ';'; }
+"<"			{ ECHON; SETCHAR; return '<'; }
+"="			{ ECHON; SETCHAR; return '='; }
+">"			{ ECHON; SETCHAR; return '>'; }
+"?"			{ ECHON; SETCHAR; return '?'; }
+"@"			{ ECHON; SETCHAR; return '@'; }
 "["			{ ECHON; SETCHAR; return '['; }
 "]"			{ ECHON; SETCHAR; return ']'; }
+"{"			{ ECHON; SETCHAR; return '{'; }
+"}"			{ ECHON; SETCHAR; return '}'; }
 
 {nl}			{ yyextra->column = 0; }
 <<EOF>>			{ return TOK_EOF; }
@@ -147,15 +163,19 @@ blkc "/*"()
 "$"{id}"?"		{ ECHON; yylval->IDENTIFIER = b_fromblk(yytext, yyleng); return VARIABLE_WSUFFIX; }
 */
 
+#include <termcap.h>
+static char termbuf[2048];
+
 static inline int
 make_sep_line(int lengths[3], char *buf)
 {
-        int len = MAX(lengths[0], lengths[1]);
-        len     = MAX(len, lengths[2]);
-        buf[0]  = 033;
-        buf[1]  = '[';
-        buf[2]  = '1';
-        buf[3]  = 'm';
+        int len  = MAX(lengths[0], lengths[1]);
+        len      = MAX(len, lengths[2]);
+        len      = MIN(len, 200);
+        buf[0]   = 033;
+        buf[1]   = '[';
+        buf[2]   = '1';
+        buf[3]   = 'm';
 
         for (size_t i = 0; i < len; ++i)
                 buf[i+4] = '=';
@@ -171,7 +191,7 @@ make_sep_line(int lengths[3], char *buf)
 }
 
 void
-yyerror(yyscan_t scanner, __attribute__((__unused__)) ast_data *data, const char *msg)
+yyerror(yyscan_t scanner, ast_data *data, const char *msg)
 {
         const size_t buflen = 16384;
         char buf[8192], out[buflen];
@@ -186,8 +206,8 @@ yyerror(yyscan_t scanner, __attribute__((__unused__)) ast_data *data, const char
         int column  = yyget_extra(scanner)->column;
         lengths[0]  = snprintf(out, buflen,
                                "\033[1;31mParsing Error:\033[37m at '\033[36m<HERE>\033[37m'"
-                               " on line \033[32m%d\033[37m col \033[32m%d\033[0m\n",
-                               yyget_lineno(scanner), column);
+                               " on line \033[32m%d\033[37m col \033[32m%d\033[0m '%s'\n",
+                               yyget_lineno(scanner), column, BS(data->filename));
         tot_len    += lengths[0];
         lengths[1]  = snprintf(out+tot_len, buflen-tot_len,
                                "\033[0;33m%s\033[1;36m<HERE>\033[0;33m%s\033[0m\n",
@@ -212,19 +232,29 @@ yyerror(yyscan_t scanner, __attribute__((__unused__)) ast_data *data, const char
 }
 
 static inline void
-yyerror_fatal(yyscan_t scanner, const char *msg)
+yyerror_fatal(yyscan_t scanner, ast_data *data, const char *msg)
 {
         yyerror(scanner, NULL, msg);
         yy_fatal_error("Cannot continue: aborting.", scanner);
 }
 
 static bstring *
-handle_block_comment(yyscan_t scanner)
+handle_block_comment(yyscan_t scanner, ast_data *data)
 {
         int      ch;
+        bool     nul  = false;
         bstring *text = b_create(80);
 
-        while ((ch = yyinput(scanner)) != 0) {
+        for (;;) {
+                ch = yyinput(scanner);
+                if (!ch) {
+                        if (nul)
+                                break;
+                        nul = true;
+                        continue;
+                }
+                nul = false;
+        /* while ((ch = input(scanner))) { */
                 b_catchar(text, ch);
                 if (ch == '*') {
                         while ((ch = yyinput(scanner)) == '*')
@@ -238,8 +268,21 @@ handle_block_comment(yyscan_t scanner)
                         b_catchar(text, ch);
                 }
         }
+        fprintf(stderr, "Got char %#02x\n%s\n", ch, yyget_text(scanner));
 
         b_destroy(text);
-        yyerror_fatal(scanner, "Unterminated comment");
+        yyerror_fatal(scanner, data, "Unterminated comment");
         return NULL;
+}
+
+static bstring *
+handle_unknown_content(const char *txt, unsigned len)
+{
+        char buf[len+1];
+        memcpy(buf, txt, len);
+        buf[len] = 0;
+
+        char *s = memchr(buf, '*', len) + 3;
+        size_t loc = s - buf;
+        return b_fromblk(s, len - loc);
 }

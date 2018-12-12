@@ -31,6 +31,7 @@ void my_XML_EndDoctypeDeclHandler(void *);
 enum xs_context_type {
         XS_TOP_DUMMY,
         XS_UNKNOWN,
+        XS_UNKNOWN_CONTENT,
         XS_BLANK_LINE,
         XS_COMMENT,
 
@@ -135,6 +136,7 @@ struct xs_context {
         union {
                 b_list  *attributes;
                 bstring *comment;
+                bstring *unknown_text;
         };
         const bstring   *debug_typename;
         bstring         *raw_name;

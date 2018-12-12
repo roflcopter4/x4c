@@ -78,6 +78,10 @@ print_data(ast_node *node, bstring *out)
                 pspaces(out, node->depth);
 
         switch (node->type) {
+        case NODE_UNKNOWN:
+                b_concat(out, node->string);
+                b_catchar(out, '\n');
+                return; /* Return early */
         case NODE_BLANK_LINE:
                 b_catchar(out, '\n');
                 return; /* Return early */

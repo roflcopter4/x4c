@@ -119,6 +119,7 @@ init_line(unsigned depth)
 /* Function Prototypes */
 /*======================================================================================*/
 
+static int handle_unknown(xs_data *data);
 static int handle_blank_line(xs_data *data);
 static int handle_comment(xs_data *data);
 static int handle_while_statement(xs_data *data, genlist *dict);
@@ -138,12 +139,13 @@ static void
 decompile_context(xs_data *data)
 {
         xs_context *ctx  = data->cur_ctx;
-        genlist *   dict = ((P44_EQ_ANY(ctx->xtype, XS_COMMENT, XS_BLANK_LINE))
+        genlist *   dict = ((P44_EQ_ANY(ctx->xtype, XS_UNKNOWN_CONTENT, XS_COMMENT, XS_BLANK_LINE))
                              ? NULL
                              : parse_attributes(ctx));
         int         ret  = 0;
 
         switch (ctx->xtype) {
+        case XS_UNKNOWN_CONTENT: ret = handle_unknown(data);                            break;
         case XS_BLANK_LINE:   ret = handle_blank_line(data);                         break;
         case XS_COMMENT:      ret = handle_comment(data);                            break;
         case XS_IF_STMT:      ret = handle_conditional(data, dict, XS_STATE_IF);     break;
@@ -363,6 +365,15 @@ handle_blank_line(xs_data *data)
         ctx->state      = 0;
         ctx->mask       = 0;
         b_list_append(data->fmt, b_alloc_null(0));
+        return 0;
+}
+
+static int
+handle_unknown(xs_data *data)
+{
+        xs_context *ctx = data->cur_ctx;
+        bstring    *str = b_sprintf("** %s", ctx->unknown_text);
+        b_list_append(data->fmt, str);
         return 0;
 }
 
