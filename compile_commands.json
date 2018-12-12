@@ -1,0 +1,92 @@
+[
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/main.c.o   -c /home/bml/files/git_x4c/src/main.c",
+  "file": "/home/bml/files/git_x4c/src/main.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/element_handler.c.o   -c /home/bml/files/git_x4c/src/element_handler.c",
+  "file": "/home/bml/files/git_x4c/src/element_handler.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/decompile/decomp_main.c.o   -c /home/bml/files/git_x4c/src/decompile/decomp_main.c",
+  "file": "/home/bml/files/git_x4c/src/decompile/decomp_main.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/decompile/decompile.c.o   -c /home/bml/files/git_x4c/src/decompile/decompile.c",
+  "file": "/home/bml/files/git_x4c/src/decompile/decompile.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/decompile/xs_context.c.o   -c /home/bml/files/git_x4c/src/decompile/xs_context.c",
+  "file": "/home/bml/files/git_x4c/src/decompile/xs_context.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/decompile/util.c.o   -c /home/bml/files/git_x4c/src/decompile/util.c",
+  "file": "/home/bml/files/git_x4c/src/decompile/util.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/compile/ast.c.o   -c /home/bml/files/git_x4c/src/compile/ast.c",
+  "file": "/home/bml/files/git_x4c/src/compile/ast.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/compile/comp_main.c.o   -c /home/bml/files/git_x4c/src/compile/comp_main.c",
+  "file": "/home/bml/files/git_x4c/src/compile/comp_main.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/gen/parser.tab.c.o   -c /home/bml/files/git_x4c/build/src/gen/parser.tab.c",
+  "file": "/home/bml/files/git_x4c/build/src/gen/parser.tab.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c.dir/gen/lexer.c.o   -c /home/bml/files/git_x4c/build/src/gen/lexer.c",
+  "file": "/home/bml/files/git_x4c/build/src/gen/lexer.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/bstring.dir/contrib/bstring/bstring/additions.c.o   -c /home/bml/files/git_x4c/src/contrib/bstring/bstring/additions.c",
+  "file": "/home/bml/files/git_x4c/src/contrib/bstring/bstring/additions.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/bstring.dir/contrib/bstring/bstring/b_list.c.o   -c /home/bml/files/git_x4c/src/contrib/bstring/bstring/b_list.c",
+  "file": "/home/bml/files/git_x4c/src/contrib/bstring/bstring/b_list.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/bstring.dir/contrib/bstring/bstring/bstrlib.c.o   -c /home/bml/files/git_x4c/src/contrib/bstring/bstring/bstrlib.c",
+  "file": "/home/bml/files/git_x4c/src/contrib/bstring/bstring/bstrlib.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c-util.dir/contrib/contrib.c.o   -c /home/bml/files/git_x4c/src/contrib/contrib.c",
+  "file": "/home/bml/files/git_x4c/src/contrib/contrib.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c-util.dir/util/find.c.o   -c /home/bml/files/git_x4c/src/util/find.c",
+  "file": "/home/bml/files/git_x4c/src/util/find.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c-util.dir/util/generic_list.c.o   -c /home/bml/files/git_x4c/src/util/generic_list.c",
+  "file": "/home/bml/files/git_x4c/src/util/generic_list.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c-util.dir/util/linked_list.c.o   -c /home/bml/files/git_x4c/src/util/linked_list.c",
+  "file": "/home/bml/files/git_x4c/src/util/linked_list.c"
+},
+{
+  "directory": "/home/bml/files/git_x4c/build/src",
+  "command": "/usr/lib/ccache/bin/gcc -DBSTRING_USE_P99 -DHAVE_CONFIG_H -D_GNU_SOURCE -I/home/bml/files/git_x4c/build -I/home/bml/files/git_x4c/src -I/home/bml/files/git_x4c/src/contrib -I/home/bml/files/git_x4c/src/compile -I/home/bml/files/git_x4c/src/decompile -I/home/bml/files/git_x4c/build/src/gen  -Wall -Werror=implicit -Werror=incompatible-pointer-types -Werror=pointer-to-int-cast -Werror=int-conversion -Werror=format-extra-args -Werror=implicit-function-declaration -march=native  -std=gnu11 -fdiagnostics-color=always -O0 -g3 -Wextra -Wpedantic -Wformat -Wno-switch-unreachable   -o CMakeFiles/x4c-util.dir/util/util.c.o   -c /home/bml/files/git_x4c/src/util/util.c",
+  "file": "/home/bml/files/git_x4c/src/util/util.c"
+}
+]

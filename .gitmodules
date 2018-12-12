@@ -1,0 +1,6 @@
+[submodule "src/contrib/p99"]
+	path = src/contrib/p99
+	url = https://github.com/roflcopter4/P99
+[submodule "src/contrib/bstring"]
+	path = src/contrib/bstring
+	url = https://github.com/roflcopter4/bstring

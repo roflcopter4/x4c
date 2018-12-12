@@ -1,0 +1,33 @@
+#cmakedefine DEBUG
+#cmakedefine USE_JEMALLOC
+#cmakedefine LZMA_SUPPORT
+
+#cmakedefine HAVE_ASPRINTF
+#cmakedefine HAVE_CLOCK_GETTIME
+#cmakedefine HAVE_ERR
+#cmakedefine HAVE_FORK
+#cmakedefine HAVE_GETTIMEOFDAY
+#cmakedefine HAVE_MEMRCHR
+#cmakedefine HAVE_MKOSTEMPS
+#cmakedefine HAVE_OPEN_MEMSTREAM
+#cmakedefine HAVE_PAUSE
+#cmakedefine HAVE_PIPE2
+#cmakedefine HAVE_POSIX_SPAWNP
+#cmakedefine HAVE_REALLOCARRAY
+#cmakedefine HAVE_STRCHRNUL
+#cmakedefine HAVE_STRDUPA
+#cmakedefine HAVE_STRLCAT
+#cmakedefine HAVE_STRLCPY
+#cmakedefine HAVE_STRSEP
+#cmakedefine HAVE_STRTONUM
+#cmakedefine HAVE_VASPRINTF
+
+#cmakedefine HAVE_EXECINFO_H
+#cmakedefine HAVE_STDATOMIC_H
+#cmakedefine HAVE_STDNORETURN_H
+#cmakedefine HAVE_THREADS_H
+
+#define GCC_ALL_INCLUDE_DIRECTORIES ${COMPILER_INCLUDE_DIRECTORIES}
+
+#define VERSION "0.0.2"
+#define PACKAGE_STRING "tag_highlight " VERSION
