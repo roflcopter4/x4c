@@ -12,23 +12,18 @@ static int fp_wrap_free(struct fp_wrap_s *wrap) {
 }
 
 ast_data *
-ast_data_create_(const void *src, const enum ast_data_types type)
+ast_data_create(const char *src)
 {
         ast_data *data = talloc_zero(NULL, ast_data);
         data->fp_wrap  = talloc(data, struct fp_wrap_s);
         talloc_set_destructor(data->fp_wrap, fp_wrap_free);
 
-        switch (type) {
-        case COMPDATA_FILE:
-                data->fp_wrap->fp = (FILE *)src;
-                data->filename    = b_fromlit("<STDIN>");
-                break;
-        case COMPDATA_FILENAME:
-                data->fp_wrap->fp = fopen((const char *)src, "rb");
+        if (src) {
+                data->fp_wrap->fp = fopen(src, "rb");
                 data->filename    = b_fromcstr(src);
-                break;
-        default:
-                abort();
+        } else {
+                data->fp_wrap->fp = stdin;
+                data->filename    = b_fromlit("<STDIN>");
         }
         talloc_steal(data, data->filename);
 
@@ -109,34 +104,90 @@ new_assignment_statement(ast_data *data, bstring *var, bstring *expr, enum ast_a
 }
 
 void
-new_conditional_statement(ast_data *data, bstring *expr, int type)
+new_conditional_statement(ast_data *data, struct if_expression *expr, int type)
 {
-        ast_node *node  = ast_node_create(data, 0);
-        node->type      = type;
-        node->condition = expr;
-        talloc_steal(node, node->condition);
+        ast_node *node = ast_node_create(data, 0);
+        node->type     = type;
+
+        if (expr) {
+                node->condition.type   = expr->type;
+                node->condition.negate = expr->negate;
+                node->condition.expr   = expr->id1;
+                talloc_steal(node, node->condition.expr);
+                if (expr->id2) {
+                        node->condition.exact = expr->id2;
+                        talloc_steal(node, node->condition.exact);
+                }
+        }
+
+#if 0
+        if (expr) {
+                if (subtype == 0) {
+                        node->condition.negate = expr->negate;
+                        node->condition.expr   = expr->id1;
+                        talloc_steal(node, node->condition.expr);
+                        if (expr->id2) {
+                                node->condition.exact = expr->id2;
+                                talloc_steal(node, node->condition.exact);
+                        }
+                } else if (subtype == 1) {
+                        node->condition.var = expr->id1;
+                        node->condition.rng = expr->rng;
+                        talloc_steal(node, node->condition.var);
+                        talloc_steal(node, node->condition.rng);
+                }
+        }
+#endif
+}
+
+/* void */
+/* new_conditional_range_statement(ast_data *data, struct) */
+
+void
+new_for_statement(ast_data *data, bstring *counter, bstring *expression, int reversed)
+{
+        ast_node *node         = ast_node_create(data, NODE_ST_FOR);
+        node->forstmt.reversed = reversed;
+        if (counter) {
+                node->forstmt.counter    = counter;
+                talloc_steal(node, node->forstmt.counter);
+        }
+        node->forstmt.expression = expression;
+        talloc_steal(node, node->forstmt.expression);
 }
 
 void
-new_for_statement(ast_data *data, bstring *var, bstring *ident, int reversed)
+new_range_statement(ast_data *data, bstring *counter, bstring *min, bstring *max, bstring *prof, bool reversed)
 {
-        ast_node *node         = ast_node_create(data, NODE_ST_FOR);
-        node->forstmt.var      = var;
-        node->forstmt.ident    = ident;
-        node->forstmt.reversed = reversed;
-        talloc_steal(node, node->forstmt.var);
-        talloc_steal(node, node->forstmt.ident);
+        ast_node *node = ast_node_create(data, NODE_ST_FOR_RANGE);
+        node->for_range_stmt.reversed = reversed;
+        if (counter) {
+                node->for_range_stmt.counter = counter;
+                talloc_steal(node, node->for_range_stmt.counter);
+        }
+        node->for_range_stmt.min  = min;
+        node->for_range_stmt.max  = max;
+        talloc_steal(node, node->for_range_stmt.min);
+        talloc_steal(node, node->for_range_stmt.max);
+        if (prof) {
+                node->for_range_stmt.prof = prof;
+                talloc_steal(node, node->for_range_stmt.prof);
+        }
 }
 
 /*======================================================================================*/
 
 void
-new_simple_statement(ast_data *data, bstring *keyword, int type)
+new_simple_statement(ast_data *data, bstring *keyword, bstring *extra, int type)
 {
         ast_node *node = ast_node_create(data, 0);
         node->type     = type;
-        node->keyword  = keyword;
-        talloc_steal(node, node->keyword);
+        node->simple.keyword = keyword;
+        talloc_steal(node, node->simple.keyword);
+        if (extra) {
+                node->simple.extra = extra;
+                talloc_steal(node, node->simple.extra);
+        }
 }
 
 void
@@ -166,7 +217,9 @@ retry:
         case NODE_ST_ELSIF:  node->block.name = b_fromlit("do_elseif"); break;
         case NODE_ST_ELSE:   node->block.name = b_fromlit("do_else");   break;
         case NODE_ST_WHILE:  node->block.name = b_fromlit("do_while");  break;
+        case NODE_ST_FOR_RANGE:
         case NODE_ST_FOR:    node->block.name = b_fromlit("do_all");    break;
+        case NODE_ST_RETURN: node->block.name = b_fromlit("return");    break;
         default:
                 warnx("Invalid block node: %s", ast_node_types_getname(prev->type));
                 abort();
@@ -209,10 +262,12 @@ new_debug_statement(ast_data *data, bstring *text, bstring *filter)
 /*======================================================================================*/
 
 void
-append_chance(ast_data *data, bstring *expr)
+append_chance(ast_data *data, bstring *expr, bstring *name)
 {
-        data->cur->chance = expr;
+        data->cur->chance      = expr;
+        data->cur->chance_name = name;
         talloc_steal(data->cur, data->cur->chance);
+        talloc_steal(data->cur, data->cur->chance_name);
 }
 
 void

@@ -28,18 +28,28 @@ static bstring * handle_unary_op(const int op, bstring *s2);
         } while (0)
 
 #define RESET_CUR() (data->cur = data->cur->parent)
+
+
 %}
 
 %code requires
 {
 #include "Common.h"
 #include "ast.h"
+
+struct str_and_tag {
+	bstring *s;
+	int      tag;
+};
 }
 %token TOK_EOF 0 "EOF"
 
+%token TOK_DEBUGCHANCE "debugchance"
 %token OP_FILTER    ">>"
 %token OP_ARROW     "=>"
 %token TOK_ADD      "add"
+%token TOK_SUBTRACT "subtract"
+%token TOK_INSERT   "insert"
 %token TOK_BREAK    "break"
 %token TOK_CHANCE   "chance"
 %token TOK_DEBUG    "debug"
@@ -56,6 +66,12 @@ static bstring * handle_unary_op(const int op, bstring *s2);
 %token TOK_WHILE    "while"
 %token TOK_REVERSED "reversed"
 %token TOK_TABLE    "table"
+%token TOK_IS       "is"
+%token TOK_NOT      "not"
+%token TOK_ISNOT    "isnot"
+%token TOK_LIST     "list"
+%token TOK_RANGE    "range"
+%token TOK_WEIGHT   "weight"
 %token BLANK_LINE
 %token <int> TOK_TYPEOF
 
@@ -72,38 +88,34 @@ static bstring * handle_unary_op(const int op, bstring *s2);
 %token <bstring *> VARIABLE          "$variable"
 %token <bstring *> TOK_CREDITS       "credit value"
 %token <bstring *> TOK_DEGREES       "degree value"
+%token <bstring *> TOK_HEALTH        "literal hp"
+
+%token <const char *> TOK_MAX "max"
+%token <const char *> TOK_MIN "min"
 
 %token TOK_CR      "Cr"
 %token TOK_CT      "ct"
 %token TOK_DEG     "Deg"
 %token TOK_KM      "km"
-%token TOK_MINUTES "min"
 %token TOK_MS      "ms"
+%token TOK_HP      "hp"
+%token TOK_LF      "LF"
 
 %token <int> '+' '-' '*' '/' '%' '^' '$' '!' '(' ')' '{' '}' ';' '.' '@' '[' ']' '?' '=' ',' ':'
+%token OP_AND OP_OR OP_EQ OP_NE OP_GE OP_LE '<' '>'
 
 %type <bstring *>    assignment_statement literal identifier_clash expression_list
                      additive_expression multiplicative_expression
-                     unary_expression assignment_expression identifier_terminal
+                     unary_expression identifier_terminal tern
                      debug_print_statement relational_expression terminal
                      expression primary_expression builtin_function 
-                     unary_expression2 relational_expression2 primary_expression2
-                     identifier additive_expression2 multiplicative_expression2
+                     identifier keyword_clash optional_expression //optional_identifier_in 
                      struct_assignment table_assignment table_expression
-%type <int>          unary_op multiplicative_op additive_op reversed
-%type <const char *> inexplicable_f
-%type <const char *> relational_op logical_op
-
-/* These associations are required to avoid conflicts. */
-%left ','
-%precedence '.'
-/* %precedence ':' */
-%precedence "else"
-/* %precedence '=' */
-/* %nonassoc   "if" "else" "then" */
-
-%token OP_AND OP_OR OP_EQ OP_NE OP_GE OP_LE '<' '>'
-%token <bstring *> TOK_MAX TOK_MIN
+                     list_expression range_profile
+%type <int>          unary_op multiplicative_op additive_op //reversed
+%type <const char *> relational_op logical_op post_op
+%type <struct if_expression> if_expression
+%type <struct str_and_tag> identity
 
 %define api.value.type union
 %token <bstring *> TOK_INTEGER    "number"
@@ -116,6 +128,22 @@ static bstring * handle_unary_op(const int op, bstring *s2);
 <char *>    TOK_CSTR
 <int>       TOK_CHAR
 <int>       TOK_VAL
+
+/* These associations are required to avoid conflicts. */
+/* %left '+' '-' */
+/* %left '*' '/' '%' */
+%left  ','
+/* %right '!' */
+/* %nonassoc '(' ')' '[' ']' '{' '}' */
+/* %nonassoc '+' '-' '*' '/' '%' '^' '$' ';'  '@' */
+/* %right '.' */
+/* %nonassoc "is" */
+/* %right '?' TOK_CR TOK_CT TOK_KM TOK_MS TOK_HP TOK_MIN TOK_MAX */
+/* %right ':' */
+/* %nonassoc OP_AND OP_OR OP_GT OP_LT OP_LE OP_GE '<' '>' */
+/* %nonassoc "in" */
+/* %nonassoc '=' */
+/* %nonassoc   "if" "else" "then" */
 
 %start statement_list;
 
@@ -139,6 +167,7 @@ statement
 statement_type
 	: compound_statement
 	| simple_statement        chance ';'
+	| return_statement        chance maybe_block
 	| conditional_statement   chance { RESET_CUR(); } compound_statement
 	| for_statement           chance { RESET_CUR(); } compound_statement
 	| unimplemented_statement chance ';'
@@ -153,9 +182,13 @@ compound_statement
 	;
 
 chance
-	: "chance" '(' expression ')' { append_chance(data, $3); }
+	: "chance"      '(' expression ')' { append_chance(data, $3, b_fromlit("chance")); }
+	| "debugchance" '(' expression ')' { append_chance(data, $3, b_fromlit("debugchance")); }
+	| "weight"      '(' expression ')' { append_chance(data, $3, b_fromlit("weight")); }
 	| %empty
 	;
+
+maybe_block : ';' | { RESET_CUR(); } compound_statement ;
 
 line_comment
 	: LINE_COMMENT { append_line_comment(data, $1, 1); }
@@ -179,6 +212,7 @@ unimplemented_subexpr
 	: IDENTIFIER       '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
 	| XML_IDENTIFIER   '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
 	| identifier_clash '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
+	| keyword_clash    '=' STRING_UNIMPL  { new_unimpl_subexpr(data, $1, $3); }
 	;
 
 unknown_statement
@@ -189,18 +223,16 @@ unknown_statement
 /* Assignment */
 
 assignment_statement
-	: "let" identifier                                { new_assignment_statement(data, $2, NULL, ASSIGNMENT_NORMAL); }
-	| "let" identifier '=' assignment_expression      { new_assignment_statement(data, $2, $4, ASSIGNMENT_NORMAL); }
-	| "let" identifier "=>" '{' struct_assignment '}' { new_assignment_statement(data, $2, $5, ASSIGNMENT_SPECIAL); }
-	| "let" identifier '=' table_expression { new_assignment_statement(data, $2, $4, ASSIGNMENT_NORMAL); }
-	| "add" identifier                                { new_assignment_statement(data, $2, NULL, ASSIGNMENT_ADD); }
+	: "let" identifier optional_expression           { new_assignment_statement(data, $2, $3, ASSIGNMENT_NORMAL); }
+	| "let" identifier '=' '{' struct_assignment '}' { new_assignment_statement(data, $2, $5, ASSIGNMENT_SPECIAL); }
+	/* | "let" identifier '=' table_expression          { new_assignment_statement(data, $2, $4, ASSIGNMENT_NORMAL); } */
+	/* | "let" identifier '=' list_expression           { new_assignment_statement(data, $2, $4, ASSIGNMENT_LIST); } */
+	| "add" identifier optional_expression           { new_assignment_statement(data, $2, $3, ASSIGNMENT_ADD); }
+	| "subtract" identifier optional_expression      { new_assignment_statement(data, $2, $3, ASSIGNMENT_SUBTRACT); }
+	| "insert" identifier optional_expression        { new_assignment_statement(data, $2, $3, ASSIGNMENT_INSERT); }
 	;
 
-assignment_expression
-	/* : "if" expression "then" expression "else" expression */
-		/* { $$ = b_sprintf("if (%s) then %s else %s", $2, $4, $6); b_destroy_all($2, $4, $6); } */
-	: expression { $$ = $1; }
-	;
+optional_expression : '=' expression { $$ = $2; } | %empty { $$ = NULL; } ;
 
 table_expression
 	: "table" "[]" { $$ = b_fromlit("table[]"); }
@@ -213,6 +245,12 @@ table_assignment
 	| %empty                                { $$ = b_fromlit(""); }
 	;
 
+list_expression
+	/* : "list" "[]"                    { $$ = b_fromlit("list[]"); } */
+	: "list" '[' expression_list ']' { $$ = b_sprintf("list[%s]", $3); b_free($3); }
+	| "list" '(' identifier ')' { $$ = b_sprintf("##list##%s", $3); b_free($3); }
+	;
+
 struct_assignment
 	: struct_assignment ',' struct_assignment { $$ = $1; B_CONCAT($$, $3); b_free($3); }
 	| identifier ':' expression               { $$ = $1; b_sprintfa($$, "=\"%s\"", $3); b_free($3); }
@@ -222,21 +260,47 @@ struct_assignment
 /* Conditionals */
 
 conditional_statement
-	: "if"    '(' expression ')' { new_conditional_statement(data, $3,   NODE_ST_IF); }
-	| "elsif" '(' expression ')' { new_conditional_statement(data, $3,   NODE_ST_ELSIF); }
-	| "else"                     { new_conditional_statement(data, NULL, NODE_ST_ELSE); }
-	| "while" '(' expression ')' { new_conditional_statement(data, $3,   NODE_ST_WHILE); }
+	: "if"    '(' if_expression ')' { new_conditional_statement(data, &($3), NODE_ST_IF); }
+	| "elsif" '(' if_expression ')' { new_conditional_statement(data, &($3), NODE_ST_ELSIF); }
+	| "else"                        { new_conditional_statement(data, NULL,  NODE_ST_ELSE); }
+	| "while" '(' if_expression ')' { new_conditional_statement(data, &($3), NODE_ST_WHILE); }
 	;
+
+if_expression
+	: expression "is" identity          { $$ = (struct if_expression){$1, ($3).s, 0, ($3).tag}; }
+	| expression "isnot" identity       { $$ = (struct if_expression){$1, ($3).s, 1, ($3).tag}; }
+	| expression                        { $$ = (struct if_expression){$1, NULL, 0, 0}; }
+	;
+
+identity
+	: '{' struct_assignment '}' { $$ = (struct str_and_tag){$2, 1}; }
+	/* | list_expression           { $$ = (struct str_and_tag){$1, 2}; } */
+	| expression {
+		if (b_starts_with($1, B("list")))
+			$$ = (struct str_and_tag){$1, 2};
+		else
+			$$ = (struct str_and_tag){$1, 0};
+	}
+	;
+
+/* identity_object                                                                                                           */
+/*         : identity_object ',' identity_object { $$ = $1; B_CONCAT($$, $3); b_free($3); fprintf(stderr, "%s\n", BS($$)); } */
+/*         | identifier ':' expression           { $$ = $1; b_sprintfa($$, "=\"%s\"", $3); b_free($3); }                     */
 
 for_statement
-	: "for" '(' identifier "in" reversed expression ')'
-		{ new_for_statement(data, $6, $3, $5); }
+	: "for" '(' identifier "in" "reversed" expression ')' { new_for_statement(data, $3, $6, 1); }
+	| "for" '(' identifier "in" expression ')' { new_for_statement(data, $3, $5, 0); }
+	| "for" '(' "reversed" expression ')' { new_for_statement(data, NULL, $4, true); }
+	| "for" '(' expression ')' { new_for_statement(data, NULL, $3, false); }
+	| "for" '(' identifier "in" "range" '(' identifier ',' identifier range_profile ')' ')'
+		{ new_range_statement(data, $3, $7, $9, $10, false); }
+	| "for" '(' "range" '(' identifier ',' identifier range_profile ')' ')'
+		{ new_range_statement(data, NULL, $5, $7, $8, false); }
 	;
 
-reversed
-	: "reversed" { $$ = 1; }
-	| %empty     { $$ = 0; }
-	;
+/* optional_identifier_in : identifier "in" { $$ = $1; } | %empty { $$ = NULL; } ; */
+
+/* reversed : "reversed" { $$ = 1; } | %empty { $$ = 0; } ; */
 
 /*======================================================================================*/
 /* Other */
@@ -246,64 +310,171 @@ debug_print_statement
 	| "debug" ">>" identifier ',' expression { new_debug_statement(data, $5, $3); }
 	;
 
+return_statement
+	: "return" '(' expression ')'  { new_simple_statement(data, b_fromlit("return"), $3, NODE_ST_RETURN); }
+	| "return"     { new_simple_statement(data, b_fromlit("return"), NULL, NODE_ST_RETURN); }
+	;
+
 simple_statement
-	: "return"           { new_simple_statement(data, b_fromlit("return"), NODE_ST_RETURN); }
-	| "break"            { new_simple_statement(data, b_fromlit("break"),  NODE_ST_BREAK); }
+	: "break"            { new_simple_statement(data, b_fromlit("break"), NULL, NODE_ST_BREAK); }
 	| "undef" identifier { new_undef_statement(data, $2); }
 	;
+
+/* return_expr : expression | %empty { $$ = NULL; } ; */
 
 /*======================================================================================*/
 /* Expressions */
 
 expression_list
-	: expression_list ',' expression { $$ = $1; b_catchar($$, ','); B_CONCAT($$, $3); b_free($3); }
+	: expression_list ',' expression { $$ = $1; b_catchar($$, ','); if ($3) { B_CONCAT($$, $3); b_free($3); } }
+	/* | expression_list ',' { $$ = $1; b_catchar($$, ','); } */
 	| expression
+	| %empty { $$ = NULL; }
 	;
 
 expression
 	: builtin_function '(' expression ')' { $$ = $1; b_sprintfa($$, "(%s)", $3); }
-	| expression '.' primary_expression { $$ = $1; b_catchar($$, '.'); b_concat($$, $3); b_free($3); }
-	/* | "if" primary_expression "then" primary_expression "else" primary_expression */
-	| "if" expression "then" expression "else" expression
-		{ $$ = b_sprintf("if (%s) then %s else %s", $2, $4, $6); b_destroy_all($2, $4, $6); }
-	| primary_expression                { $$ = $1; }
+	| primary_expression
 	;
 
 primary_expression
 	: primary_expression logical_op relational_expression
 		{ $$ = $1; B_CONCAT($$, $2); B_CONCAT($$, $3); b_free($3); }
-	| relational_expression { $$ = $1; }
+	| relational_expression
 	;
 
 relational_expression
 	: relational_expression relational_op additive_expression
 		{ $$ = $1; B_CONCAT($$, $2); B_CONCAT($$, $3); b_free($3); }
-	| additive_expression { $$ = $1; }
+	| additive_expression
 	;
 
 additive_expression 
 	: additive_expression additive_op multiplicative_expression
 		{ $$ = $1; B_CONCAT($$, $2); B_CONCAT($$, $3); b_free($3); }
-	| multiplicative_expression { $$ = $1; }
+	| multiplicative_expression
 	;
 
 multiplicative_expression
-	: multiplicative_expression multiplicative_op unary_expression 
+	: multiplicative_expression multiplicative_op unary_expression
 		{ $$ = $1; B_CONCAT($$, $2); B_CONCAT($$, $3); b_free($3); }
-	| unary_expression { $$ = $1; }
+	| unary_expression
 	;
+
+/* terniary_expression        */
+/*         | unary_expression */
+/*         ;                  */
 
 unary_expression
 	: unary_op unary_expression { $$ = handle_unary_op($1, $2); }
-	| terminal { $$ = $1; }
-	| literal  { $$ = $1; }
+	| tern
+	/* | identifier_clash */
+	;
+
+tern
+	: "if" expression "then" expression "else" expression
+		{ $$ = b_sprintf("if (%s) then %s else %s", $2, $4, $6); b_destroy_all($2, $4, $6); }
+	/* : "if" '(' expression ')' "then" '(' expression ')' "else" '(' expression ')' */
+	| identifier
+	;
+
+identifier
+	: identifier '.' terminal { $$ = $1; b_catchar($$, '.'); b_concat($$, $3); b_free($3); }
+	| terminal
+	;
+
+terminal
+	: '(' expression ')'      { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); }
+	| '[' expression_list ']' { if ($2) { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); } else $$ = b_fromlit("[]"); }
+	| '{' expression_list '}' { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); }
+	| table_expression
+	| list_expression
+	| identifier_terminal
+	| literal
+	| terminal post_op { $$ = $1; if ($2) b_catcstr($$, $2); }
 	;
 
 /*======================================================================================*/
 
+post_op
+	: '?'   { $$ = "?";   }
+	| 'f'   { $$ = "f";   }
+	| 'i'   { $$ = "i";   }
+	| 's'   { $$ = "s";   }
+	| 'm'   { $$ = "m";   }
+	| 'h'   { $$ = "h";   }
+	| 'L'   { $$ = "L";   }
+	| "ct"  { $$ = "ct";  }
+	| "km"  { $$ = "km";  }
+	| "Cr"  { $$ = "Cr";  }
+	| "ms"  { $$ = "ms";  }
+	| "min" { $$ = "min"; }
+	| "hp"  { $$ = "hp";  }
+	| "LF"  { $$ = "LF";  }
+	;
+
+/* function : builtin_function | virtual_function ; */
+range_profile : ',' STRING_UNIMPL { $$ = $2; } | %empty { $$ = NULL; } ;
+
+/*======================================================================================*/
+/* Tokens */
+
+literal
+	: STRING_LITERAL
+	| TOK_FLOAT
+	| TOK_INTEGER
+	| TOK_NULL { $$ = b_fromlit("null"); }
+	| TOK_DISTANCE
+	| TOK_DEGREES
+	| TOK_HEALTH
+	| TIME_VAL
+	| TOK_CREDITS
+	| TOK_EMPTY_ARRAY
+	;
+
+identifier_terminal
+	: IDENTIFIER
+	| TOK_CONST
+	| VARIABLE
+	| identifier_clash
+	;
+
+identifier_clash
+	: TOK_MIN { $$ = b_fromlit("min"); }
+	| TOK_MAX { $$ = b_fromlit("max"); }
+	| TOK_LIST { $$ = b_fromlit("list"); }
+	| TOK_RANGE { $$ = b_fromlit("range"); }
+	| TOK_TABLE { $$ = b_fromlit("table"); }
+	| TOK_DEBUG { $$ = b_fromlit("debug"); }
+	;
+
+keyword_clash
+	: TOK_CHANCE { $$ = b_fromlit("chance"); }
+	| TOK_BREAK  { $$ = b_fromlit("break"); }
+	| TOK_RETURN { $$ = b_fromlit("return"); }
+	| TOK_WEIGHT { $$ = b_fromlit("weight"); }
+	; 
+
+builtin_function  : TOK_SQRT ;
+/* virtual_function  : TOK_RANGE ; */
+additive_op       : '+' | '-' ;
+unary_op          : '+' | '-' | '@' | '!' { $$ = '!'; } | TOK_TYPEOF ;
+multiplicative_op : '^' | '*' | '/' | '%' ;
+
+relational_op     : OP_EQ  { $$ = "=="; }  | OP_NE { $$ = "!="; }
+                  | OP_LE  { $$ = "le"; }  | OP_GE { $$ = "ge"; }
+                  | '<'    { $$ = "lt"; }  | '>'   { $$ = "gt"; } ;
+logical_op        : OP_AND { $$ = "and"; } | OP_OR { $$ = "or"; } ;
+
+
+/*======================================================================================*/
+%%
+/*======================================================================================*/
+
+#if 0
 identifier
 	: identifier '.' primary_expression2 { $$ = $1; b_catchar($$, '.'); b_concat($$, $3); b_free($3); }
-	| primary_expression
+	| primary_expression2
 	;
 
 primary_expression2
@@ -332,65 +503,16 @@ multiplicative_expression2
 
 unary_expression2
 	: unary_op unary_expression2 { $$ = handle_unary_op($1, $2); }
-	| terminal { $$ = $1; }
+	| terminal2 { $$ = $1; }
 	;
 
-/*======================================================================================*/
-/* Tokens */
-
-terminal
+terminal2
 	: '(' expression ')' inexplicable_f  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); if ($4) b_catcstr($$, $4); }
-	| '[' expression_list ']'  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); }
-	| '{' expression_list '}'  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); }
-	| identifier_terminal { $$ = $1; }
-	| terminal '?'        { $$ = $1; b_catchar($$, '?'); }
-	;
-
-literal
-	: STRING_LITERAL
-	| TOK_FLOAT
-	| TOK_INTEGER
-	| TOK_NULL           { $$ = NULL; }
-	| TOK_DISTANCE
-	| TOK_DEGREES
-	| TIME_VAL
-	| TOK_CREDITS
-	| TOK_EMPTY_ARRAY
-	;
-
-identifier_terminal
-	: IDENTIFIER
-	| TOK_CONST
+	| IDENTIFIER
 	| VARIABLE
-	| identifier_clash
+	| terminal2 '?'        { $$ = $1; b_catchar($$, '?'); }
 	;
-
-identifier_clash
-	: TOK_MIN
-	| TOK_MAX
-	| TOK_CHANCE { $$ = b_fromlit("chance"); }
-	| TOK_BREAK  { $$ = b_fromlit("break"); }
-	| TOK_RETURN { $$ = b_fromlit("return"); }
-	; 
-
-inexplicable_f : 'f' { $$ = "f"; } | 'i' { $$ = "i"; } | 's' { $$ = "s"; } | 'm' { $$ = "m"; }
-	       | "ct" { $$ = "ct"; } | "km" { $$ = "km"; } | "Cr" { $$ = "Cr"; } | "ms" { $$ = "ms"; }
-	       | "min" { $$ = "min"; } | %empty { $$ = NULL; } ;
-
-builtin_function  : TOK_SQRT ;
-additive_op       : '+' | '-' ;
-unary_op          : '+' | '-' | '@' | '!' { $$ = '!'; } | TOK_TYPEOF ;
-multiplicative_op : '^' | '*' | '/' | '%' ;
-
-relational_op     : OP_EQ  { $$ = "=="; }  | OP_NE { $$ = "!="; }
-                  | OP_LE  { $$ = "le"; }  | OP_GE { $$ = "ge"; }
-                  | '<'    { $$ = "lt"; }  | '>'   { $$ = "gt"; } ;
-logical_op        : OP_AND { $$ = "and"; } | OP_OR { $$ = "or"; } ;
-
-
-/*======================================================================================*/
-%%
-/*======================================================================================*/
+#endif
 
 static void
 fix_line_comment(bstring *bstr)

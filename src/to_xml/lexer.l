@@ -21,6 +21,8 @@
 
 static bstring *handle_block_comment(yyscan_t scanner, ast_data *data);
 static bstring *handle_unknown_content(const char *txt, unsigned len);
+
+/* post ({m}"in"|{m}"s"|{d}"eg"|{c}r|{k}m|{f}|{h}|{s}) */
 %}
 
 %option reentrant bison-bridge noyywrap yylineno
@@ -36,6 +38,33 @@ Sstring \'(\\\'|[^\'])*\'
 nl      (\n|\r\n)
 
 blkc "/*"()
+a [aA]
+b [bB]
+c [cC]
+d [dD]
+e [eE]
+f [fF]
+g [gG]
+h [hH]
+i [iI]
+j [jJ]
+k [kK]
+l [lL]
+m [mM]
+n [nN]
+o [oO]
+p [pP]
+q [qQ]
+r [rR]
+s [sS]
+t [tT]
+u [uU]
+v [vV]
+w [wW]
+x [xX]
+y [yY]
+z [zZ]
+
 
 %%
 
@@ -49,35 +78,43 @@ blkc "/*"()
 
 {ws}+			{ UPDATE_COLUMN(); }
 
-{int}"min"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
-{int}"ms"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
-{int}"s"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
-{int}"m"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DISTANCE; }
-{int}"km"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DISTANCE; }
-{int}"Cr"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_CREDITS; }
-{int}"Deg"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DEGREES; }
-{int}+"."{int}*"f"?	{ ECHON; yylval->TOK_FLOAT      = MK_BSTRING; return TOK_FLOAT; }
+{int}{m}"in"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
+{int}{m}"s"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
+{int}{h}		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
+{int}{s}		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TIME_VAL; }
+{int}{m}		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DISTANCE; }
+{int}{k}"m"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DISTANCE; }
+{int}{c}"r"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_CREDITS; }
+{int}{d}"eg"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_DEGREES; }
+{int}"hp"		{ ECHON; yylval->BSTRING        = MK_BSTRING; return TOK_HEALTH; }
+{int}+"."{int}*({l}?{f}|{d}"eg")?	{ ECHON; yylval->TOK_FLOAT      = MK_BSTRING; return TOK_FLOAT; }
 {int}f			{ ECHON; yylval->TOK_FLOAT      = MK_BSTRING; return TOK_FLOAT; }
 {int}			{ ECHON; yylval->TOK_INTEGER    = MK_BSTRING; return TOK_INTEGER; }
 {Dstring}		{ ECHON; yylval->STRING_UNIMPL  = MK_BSTRING; return STRING_UNIMPL; }
 {Sstring}		{ ECHON; yylval->STRING_LITERAL = MK_BSTRING; return STRING_LITERAL; }
 
+"hp"			{ ECHON; SETSTR;  return TOK_HP; }
 "min"			{ ECHON; SETSTR;  return TOK_MIN; }
 "ms"			{ ECHON; SETSTR;  return TOK_MS; }
 "km"			{ ECHON; SETSTR;  return TOK_KM; }
-"Cr"			{ ECHON; SETSTR;  return TOK_CR; }
-"Deg"			{ ECHON; SETSTR;  return TOK_DEG; }
+{c}"r"			{ ECHON; SETSTR;  return TOK_CR; }
+{d}"eg"			{ ECHON; SETSTR;  return TOK_DEG; }
 "ct"			{ ECHON; SETSTR;  return TOK_CT; }
+{l}{f}			{ ECHON; SETSTR;  return TOK_LF; }
 "m"			{ ECHON; SETSTR;  return 'm'; }
-"f"			{ ECHON; SETCHAR; return 'f'; }
+{f}			{ ECHON; SETCHAR; return 'f'; }
 "i"			{ ECHON; SETCHAR; return 'i'; }
 "s"			{ ECHON; SETCHAR; return 's'; }
+{h}			{ ECHON; SETCHAR; return 'h'; }
+{l}			{ ECHON; SETCHAR; return 'L'; }
 
 "null"			{ ECHON; return TOK_NULL; }
 "add"			{ ECHON; return TOK_ADD; }
+"range"			{ ECHON; return TOK_RANGE; }
 "break"			{ ECHON; return TOK_BREAK; }
 "chance"		{ ECHON; return TOK_CHANCE; }
 "debug"			{ ECHON; return TOK_DEBUG; }
+"debugchance"		{ ECHON; return TOK_DEBUGCHANCE; }
 "else"			{ ECHON; return TOK_ELSE; }
 "elsif"			{ ECHON; return TOK_ELSIF; }
 "for"			{ ECHON; return TOK_FOR; }
@@ -90,8 +127,14 @@ blkc "/*"()
 "then"			{ ECHON; return TOK_THEN; }
 "undef"			{ ECHON; return TOK_UNDEF; }
 "while"			{ ECHON; return TOK_WHILE; }
+"is"			{ ECHON; return TOK_IS; }
+"not"			{ ECHON; return TOK_NOT; }
+"isnot"			{ ECHON; return TOK_ISNOT; }
+"subtract"		{ ECHON; return TOK_SUBTRACT; }
+"insert"		{ ECHON; return TOK_INSERT; }
+"list"			{ ECHON; return TOK_LIST; }
+"weight"		{ ECHON; return TOK_WEIGHT; }
 
-"[]"			{ ECHON; yylval->BSTRING    = MK_BSTRING; return TOK_EMPTY_ARRAY; }
 "event"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_CONST; }
 "this"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_CONST; }
 "error"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_CONST; }
@@ -99,7 +142,7 @@ blkc "/*"()
 "typeof"		{ ECHON; yylval->TOK_VAL    = TOK_TYPEOF; return TOK_TYPEOF; }
 
 "$"{id}			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return VARIABLE; }
-{xmlid}			{ 
+{xmlid}			{
     ECHON;
     yylval->IDENTIFIER = b_fromblk(yytext, yyleng);
     int64_t loc = b_strchr(yylval->IDENTIFIER, ':');
@@ -153,18 +196,9 @@ blkc "/*"()
 %%
 
 /*
-"max"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_MAX; }
-"min"			{ ECHON; yylval->IDENTIFIER = MK_BSTRING; return TOK_MIN; }
-"max:"			{ ECHON; yyunput(1, yytext, yyscanner); yylval->IDENTIFIER = b_fromlit("max"); return TOK_MAX; }
-"min:"			{ ECHON; yyunput(1, yytext, yyscanner); yylval->IDENTIFIER = b_fromlit("min"); return TOK_MIN; }
-.          { ((void)0); }
-{int}"km"		{ ECHON; yylval->DISTANCE = (struct distance){ xatoi(yytext), DIST_KILO }; return DISTANCE; }
-"@$"{id}		{ ECHON; yylval->IDENTIFIER = b_fromblk(yytext, yyleng); return VARIABLE_WPREFIX; }
-"$"{id}"?"		{ ECHON; yylval->IDENTIFIER = b_fromblk(yytext, yyleng); return VARIABLE_WSUFFIX; }
-*/
+"[]"			{ ECHON; yylval->BSTRING    = MK_BSTRING; return TOK_EMPTY_ARRAY; }
 
-#include <termcap.h>
-static char termbuf[2048];
+*/
 
 static inline int
 make_sep_line(int lengths[3], char *buf)
@@ -234,7 +268,7 @@ yyerror(yyscan_t scanner, ast_data *data, const char *msg)
 static inline void
 yyerror_fatal(yyscan_t scanner, ast_data *data, const char *msg)
 {
-        yyerror(scanner, NULL, msg);
+        yyerror(scanner, data, msg);
         yy_fatal_error("Cannot continue: aborting.", scanner);
 }
 
@@ -254,7 +288,6 @@ handle_block_comment(yyscan_t scanner, ast_data *data)
                         continue;
                 }
                 nul = false;
-        /* while ((ch = input(scanner))) { */
                 b_catchar(text, ch);
                 if (ch == '*') {
                         while ((ch = yyinput(scanner)) == '*')
@@ -282,7 +315,7 @@ handle_unknown_content(const char *txt, unsigned len)
         memcpy(buf, txt, len);
         buf[len] = 0;
 
-        char *s = memchr(buf, '*', len) + 3;
+        char *s = ((char *)memchr(buf, '*', len)) + 3;
         size_t loc = s - buf;
         return b_fromblk(s, len - loc);
 }

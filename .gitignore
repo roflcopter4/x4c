@@ -54,3 +54,4 @@ dkms.conf
 # Directories
 build
 BAK
+compile_commands.json

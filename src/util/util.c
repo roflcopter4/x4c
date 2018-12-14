@@ -179,9 +179,10 @@ err_(UNUSED const int status, const bool print_err, const char *const __restrict
         vfprintf(stderr, buf, ap);
         va_end(ap);
 
-        SHOW_STACKTRACE();
+        abort();
+        /* SHOW_STACKTRACE(); */
 
-        exit(status);
+        /* exit(status); */
 }
 
 extern FILE *echo_log;
