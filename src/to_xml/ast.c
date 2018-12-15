@@ -119,29 +119,7 @@ new_conditional_statement(ast_data *data, struct if_expression *expr, int type)
                         talloc_steal(node, node->condition.exact);
                 }
         }
-
-#if 0
-        if (expr) {
-                if (subtype == 0) {
-                        node->condition.negate = expr->negate;
-                        node->condition.expr   = expr->id1;
-                        talloc_steal(node, node->condition.expr);
-                        if (expr->id2) {
-                                node->condition.exact = expr->id2;
-                                talloc_steal(node, node->condition.exact);
-                        }
-                } else if (subtype == 1) {
-                        node->condition.var = expr->id1;
-                        node->condition.rng = expr->rng;
-                        talloc_steal(node, node->condition.var);
-                        talloc_steal(node, node->condition.rng);
-                }
-        }
-#endif
 }
-
-/* void */
-/* new_conditional_range_statement(ast_data *data, struct) */
 
 void
 new_for_statement(ast_data *data, bstring *counter, bstring *expression, int reversed)
@@ -165,13 +143,14 @@ new_range_statement(ast_data *data, bstring *counter, bstring *min, bstring *max
                 node->for_range_stmt.counter = counter;
                 talloc_steal(node, node->for_range_stmt.counter);
         }
-        node->for_range_stmt.min  = min;
-        node->for_range_stmt.max  = max;
-        talloc_steal(node, node->for_range_stmt.min);
-        talloc_steal(node, node->for_range_stmt.max);
+        node->for_range_stmt.rng       = talloc(node, struct xs_range);
+        node->for_range_stmt.rng->min  = min;
+        node->for_range_stmt.rng->max  = max;
+        talloc_steal(node, node->for_range_stmt.rng->min);
+        talloc_steal(node, node->for_range_stmt.rng->max);
         if (prof) {
-                node->for_range_stmt.prof = prof;
-                talloc_steal(node, node->for_range_stmt.prof);
+                node->for_range_stmt.rng->prof = prof;
+                talloc_steal(node, node->for_range_stmt.rng->prof);
         }
 }
 

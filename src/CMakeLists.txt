@@ -61,7 +61,7 @@ endif()
 
 add_executable(x4c 
     main.c
-    element_handler.c
+    from_xml/element_handler.c
     from_xml/decomp_main.c
     from_xml/decompile.c
     from_xml/xs_context.c

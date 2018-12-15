@@ -127,15 +127,15 @@ print_data(ast_node *node, bstring *out)
                         b_sprintfa(out, " exact=\"%s\"", node->assignment.expr);
                 break;
         }
+        case NODE_ST_ELSE:
+                b_sprintfa(out, "<do_else");
+                break;
         case NODE_ST_IF:
                 b_sprintfa(out, "<do_if value=\"%s\"", node->condition.expr);
                 goto condition;
         case NODE_ST_ELSIF:
                 b_sprintfa(out, "<do_elseif value=\"%s\"", node->condition.expr);
                 goto condition;
-        case NODE_ST_ELSE:
-                b_sprintfa(out, "<do_else");
-                break;
         case NODE_ST_WHILE:
                 b_sprintfa(out, "<do_while value=\"%s\"", node->condition.expr);
         condition:
@@ -168,11 +168,11 @@ print_data(ast_node *node, bstring *out)
                 break;
         case NODE_ST_FOR_RANGE:
                 b_sprintfa(out, "<do_all min=\"%s\" max=\"%s\"",
-                           node->for_range_stmt.min, node->for_range_stmt.max);
+                           node->for_range_stmt.rng->min, node->for_range_stmt.rng->max);
                 if (node->for_range_stmt.counter)
                         b_sprintfa(out, " counter=\"%s\"", node->for_range_stmt.counter);
-                if (node->for_range_stmt.prof)
-                        b_sprintfa(out, " profile=%s", node->for_range_stmt.prof);
+                if (node->for_range_stmt.rng->prof)
+                        b_sprintfa(out, " profile=%s", node->for_range_stmt.rng->prof);
                 break;
         case NODE_ST_DEBUG_TEXT:
                 b_sprintfa(out, "<debug_text text=\"%s\"", node->debug.text);

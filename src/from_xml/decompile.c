@@ -6,25 +6,24 @@
 
 #define INDENT_WIDTH 4
 
-#define PRAGMA_GCC_PUSH_AND(str)   _Pragma("GCC diagnostic push") _Pragma(str)
 #define P01_DECLARE_BSTRING_(NAME) bstring *NAME = NULL
-#define DECLARE_BSTRINGS(...)      P99_SEP(P01_DECLARE_BSTRING_, __VA_ARGS__)
 #define P01_BSTRING_PARAM_(NAME)   bstring *NAME
+#define B_DECLARE(...)             P99_SEP(P01_DECLARE_BSTRING_, __VA_ARGS__)
 #define B_PARAMS(...)              P99_SEQ(P01_BSTRING_PARAM_, __VA_ARGS__)
+
 #define UNKNOWN_ATTR_ERR()                                        \
         errx(1, "Error: Unexpected attribute \"%s : %s\" in %s.", \
              BS(ent->key), BS(ent->val), __func__);
 
-#define SETUP_CHANCE()               \
+#define SETUP_COMMON                 \
         bstring *chance      = NULL; \
         bstring *comment     = NULL; \
         int      chance_type = 0
-#define HANDLE_CHANCE()                                                               \
+#define HANDLE_COMMON                                                                 \
         case XS_ATTR_CHANCE:  chance  = ent->val; chance_type = CHANCE_NORMAL; break; \
         case XS_ATTR_WEIGHT:  chance  = ent->val; chance_type = CHANCE_WEIGHT; break; \
         case XS_ATTR_COMMENT: comment = ent->val; break
 
-#define convert_indeces(s)
 
 P99_DEFINE_ENUM(xs_state);
 
@@ -87,9 +86,12 @@ enum xs_attr_type {
         XS_ATTR_SEED,
 };
 
+typedef enum   xs_attr_type       xs_attr_type;
+typedef struct attribute_identity attribute_identity;
+
 static struct attribute_identity {
-        bstring           attr;
-        enum xs_attr_type id;
+        bstring      attr;
+        xs_attr_type id;
 } attr_ids[] = {
         { BT("name"),        XS_ATTR_NAME        },
         { BT("value"),       XS_ATTR_VALUE       },
@@ -114,17 +116,17 @@ static struct attribute_identity {
 struct kv_pair {
         bstring *key;
         bstring *val;
-        enum xs_attr_type attr_type;
+        xs_attr_type attr_type;
 };
 
 static int attr_ids_cb(const void *a, const void *b)
 {
-        return b_strcmp_fast(&((struct attribute_identity *)a)->attr,
-                             &((struct attribute_identity *)b)->attr);
+        return b_strcmp_fast(&((attribute_identity *)a)->attr,
+                             &((attribute_identity *)b)->attr);
 }
 __attribute__((__constructor__)) static void sort_attr_ids(void)
 {
-        qsort(attr_ids, ARRSIZ(attr_ids), sizeof(struct attribute_identity), attr_ids_cb);
+        qsort(attr_ids, ARRSIZ(attr_ids), sizeof(attribute_identity), attr_ids_cb);
 }
 
 /*======================================================================================*/
@@ -162,7 +164,6 @@ init_line(unsigned depth)
 static int handle_unknown(xs_data *data);
 static int handle_blank_line(xs_data *data);
 static int handle_comment(xs_data *data);
-static int handle_while_statement(xs_data *data, genlist *dict);
 static int handle_for_statement(xs_data *data, genlist *dict);
 static int handle_conditional(xs_data *data, genlist *dict, const xs_state state);
 static int handle_assignment(xs_data *data, genlist *dict);
@@ -171,18 +172,18 @@ static int handle_debug_text(xs_data *data, genlist *dict);
 static int handle_keywords(xs_data *data, genlist *dict, xs_context_type type);
 static int fallback_handler(xs_data *data, genlist *dict);
 
-static genlist *parse_attributes(xs_context *ctx);
-static void     add_with_chance(bstring *strp, bstring *chance, int mask);
-static void     add_comment(bstring *str, bstring *comment);
+static genlist    *parse_attributes(xs_context *ctx);
+static void        add_with_chance(bstring *str, bstring *chance, int mask);
+static inline void add_comment(bstring *str, bstring *comment);
 
 static void
 decompile_context(xs_data *data)
 {
+        int         ret  = 0;
         xs_context *ctx  = data->cur_ctx;
-        genlist *   dict = ((P44_EQ_ANY(ctx->xtype, XS_UNKNOWN_CONTENT, XS_COMMENT, XS_BLANK_LINE))
+        genlist    *dict = ((P44_EQ_ANY(ctx->xtype, XS_UNKNOWN_CONTENT, XS_COMMENT, XS_BLANK_LINE))
                              ? NULL
                              : parse_attributes(ctx));
-        int         ret  = 0;
 
         switch (ctx->xtype) {
         case XS_UNKNOWN_CONTENT: ret = handle_unknown(data);                            break;
@@ -192,7 +193,6 @@ decompile_context(xs_data *data)
         case XS_ELSEIF_STMT:     ret = handle_conditional(data, dict, XS_STATE_ELSEIF); break;
         case XS_ELSE_STMT:       ret = handle_conditional(data, dict, XS_STATE_ELSE);   break;
         case XS_WHILE_STMT:      ret = handle_conditional(data, dict, XS_STATE_WHILE);  break;
-        /* case XS_WHILE_STMT:      ret = handle_while_statement(data, dict);              break; */
         case XS_FOR_STMT:        ret = handle_for_statement(data, dict);                break;
         case XS_SET_VALUE:       ret = handle_assignment(data, dict);                   break;
         case XS_REMOVE_VALUE:    ret = handle_remove_value(data, dict);                 break;
@@ -227,47 +227,10 @@ decompile_context(xs_data *data)
 /*======================================================================================*/
 
 extern void (de_verbosify)(bstring **orig);
-extern void (convert_indeces)(bstring **orig);
 #define PREV_STR (data->fmt->lst[data->fmt->qty-1])
 
-static int
-handle_while_statement(xs_data *data, genlist *dict)
-{
-        xs_context *ctx = data->cur_ctx;
-        bstring    *str = init_line(ctx->depth);
-        ctx->state      = XS_STATE_WHILE;
-        ctx->mask       = XS_MASK_LOOP | XS_MASK_BLOCK;
-
-        bool negate = false;
-        SETUP_CHANCE();
-        DECLARE_BSTRINGS(val);
-        GENLIST_FOREACH (dict, struct kv_pair *, ent) {
-                switch (ent->attr_type) {
-                HANDLE_CHANCE();
-                case XS_ATTR_VALUE:   val     = ent->val; break;
-                case XS_ATTR_NEGATE:  negate  = b_iseq(ent->val, B("true")); break;
-                case XS_ATTR_UNKNOWN:
-                default:
-                        UNKNOWN_ATTR_ERR();
-                }
-        }
-
-        ASSERT(val, str);
-        if (negate)
-                b_sprintfa(str, "while (!(%s)) ", val);
-        else
-                b_sprintfa(str, "while (%s) ", val);
-        add_with_chance(str, chance, CHANCE_BRACE | chance_type);
-        de_verbosify(&str);
-        convert_indeces(&str);
-        add_comment(str, comment);
-
-        b_list_append(data->fmt, str);
-        return 0;
-}
-
 static void
-handle_foreach_statement(bstring *str, bstring *counter, bstring *value, bool reverse)
+handle_foreach_statement(B_PARAMS(str, counter, value), bool reverse)
 {
         if (counter) {
                 if (reverse)
@@ -283,7 +246,7 @@ handle_foreach_statement(bstring *str, bstring *counter, bstring *value, bool re
 }
 
 static void
-handle_for_range_statement(bstring *str, bstring *counter, bstring *min, bstring *max, bstring *prof)
+handle_for_range_statement(B_PARAMS(str, counter, min, max, prof))
 {
         b_catlit(str, "for (");
         if (counter)
@@ -307,11 +270,11 @@ handle_for_statement(xs_data *data, genlist *dict)
         ctx->mask       = XS_MASK_LOOP | XS_MASK_BLOCK;
 
         bool reverse = false;
-        SETUP_CHANCE();
-        DECLARE_BSTRINGS(value, counter, min, max, prof);
+        SETUP_COMMON;
+        B_DECLARE(value, counter, min, max, prof);
         GENLIST_FOREACH (dict, struct kv_pair *, ent) {
                 switch (ent->attr_type) {
-                HANDLE_CHANCE();
+                HANDLE_COMMON;
                 case XS_ATTR_REVERSE: reverse = b_iseq(ent->val, B("true")); break;
                 case XS_ATTR_EXACT:   value   = ent->val; break;
                 case XS_ATTR_COUNTER: counter = ent->val; break;
@@ -337,7 +300,6 @@ handle_for_statement(xs_data *data, genlist *dict)
 
         add_with_chance(str, chance, CHANCE_BRACE | chance_type);
         de_verbosify(&str);
-        convert_indeces(&str);
         add_comment(str, comment);
 
         b_list_append(data->fmt, str);
@@ -347,7 +309,7 @@ handle_for_statement(xs_data *data, genlist *dict)
 /*======================================================================================*/
 /* Conditionals */
 
-static void handle_conditional_range_stmt(bstring *str, bstring *maxi, bstring *mini);
+static void handle_conditional_range_stmt(B_PARAMS(str, mini, maxi));
 static void handle_positive_conditional(B_PARAMS(str, val, exact, mini, maxi, list), bool range);
 static void handle_negative_conditional(B_PARAMS(str, val, exact, mini, maxi, list), bool range);
 
@@ -385,7 +347,7 @@ handle_negative_conditional(B_PARAMS(str, val, exact, mini, maxi, list), const b
 }
 
 static void
-handle_conditional_range_stmt(bstring *str, bstring *maxi, bstring *mini)
+handle_conditional_range_stmt(B_PARAMS(str, mini, maxi))
 {
         bool chain = false;
         b_catlit(str, " {");
@@ -414,11 +376,11 @@ handle_conditional(xs_data *data, genlist *dict, const xs_state state)
                 ctx->mask = XS_MASK_COND | XS_MASK_BLOCK;
 
         bool negate = false;
-        SETUP_CHANCE();
-        DECLARE_BSTRINGS(val, exact, mini, maxi, list);
+        SETUP_COMMON;
+        B_DECLARE(val, exact, mini, maxi, list);
         GENLIST_FOREACH (dict, struct kv_pair *, ent) {
                 switch (ent->attr_type) {
-                HANDLE_CHANCE();
+                HANDLE_COMMON;
                 case XS_ATTR_VALUE:   val     = ent->val; break;
                 case XS_ATTR_NEGATE:  negate  = b_iseq(ent->val, B("true")); break;
                 case XS_ATTR_EXACT:   exact   = ent->val; break;
@@ -475,7 +437,6 @@ handle_conditional(xs_data *data, genlist *dict, const xs_state state)
 
         add_with_chance(PREV_STR, chance, CHANCE_BRACE | chance_type);
         de_verbosify(&PREV_STR);
-        convert_indeces(&PREV_STR);
         add_comment(PREV_STR, comment);
 
         return 0;
@@ -524,11 +485,11 @@ handle_assignment(xs_data *data, genlist *dict)
         ctx->state      = XS_STATE_STATEMENT;
         ctx->mask       = XS_MASK_STATEMENT;
 
-        SETUP_CHANCE();
-        DECLARE_BSTRINGS(name, val, min, max, prof, operation, seed);
+        SETUP_COMMON;
+        B_DECLARE(name, val, min, max, prof, operation, seed);
         GENLIST_FOREACH (dict, struct kv_pair *, ent) {
                 switch (ent->attr_type) {
-                HANDLE_CHANCE();
+                HANDLE_COMMON;
                 case XS_ATTR_NAME:      name      = ent->val; break;
                 case XS_ATTR_EXACT:     val       = ent->val; break;
                 case XS_ATTR_OPERATION: operation = ent->val; break;
@@ -562,7 +523,6 @@ handle_assignment(xs_data *data, genlist *dict)
 
         add_with_chance(str, chance, CHANCE_SEMICOLON | chance_type);
         de_verbosify(&str);
-        convert_indeces(&str);
         add_comment(str, comment);
 
         b_list_append(data->fmt, str);
@@ -577,11 +537,11 @@ handle_remove_value(xs_data *data, genlist *dict)
         ctx->state      = XS_STATE_STATEMENT;
         ctx->mask       = XS_MASK_STATEMENT;
 
-        SETUP_CHANCE();
-        DECLARE_BSTRINGS(name);
+        SETUP_COMMON;
+        B_DECLARE(name);
         GENLIST_FOREACH (dict, struct kv_pair *, ent) {
                 switch (ent->attr_type) {
-                HANDLE_CHANCE();
+                HANDLE_COMMON;
                 case XS_ATTR_NAME:    name    = ent->val; break;
                 default:
                 case XS_ATTR_UNKNOWN:
@@ -594,7 +554,6 @@ handle_remove_value(xs_data *data, genlist *dict)
 
         add_with_chance(str, chance, CHANCE_SEMICOLON | chance_type);
         de_verbosify(&str);
-        convert_indeces(&str);
         add_comment(str, comment);
 
         b_list_append(data->fmt, str);
@@ -613,11 +572,11 @@ handle_debug_text(xs_data *data, genlist *dict)
         ctx->state       = XS_STATE_STATEMENT;
         ctx->mask        = XS_MASK_STATEMENT;
 
-        SETUP_CHANCE();
-        DECLARE_BSTRINGS(text, filter);
+        SETUP_COMMON;
+        B_DECLARE(text, filter);
         GENLIST_FOREACH (dict, struct kv_pair *, ent) {
                 switch (ent->attr_type) {
-                HANDLE_CHANCE();
+                HANDLE_COMMON;
                 case XS_ATTR_DEBUGCHANCE:
                         chance      = ent->val;
                         chance_type = CHANCE_DEBUG;
@@ -638,7 +597,6 @@ handle_debug_text(xs_data *data, genlist *dict)
 
         add_with_chance(str, chance, CHANCE_SEMICOLON | chance_type);
         de_verbosify(&str);
-        convert_indeces(&str);
         add_comment(str, comment);
 
         b_list_append(data->fmt, str);
@@ -661,11 +619,11 @@ handle_keywords(xs_data *data, genlist *dict, xs_context_type type)
                 ch_mask = CHANCE_SEMICOLON;
         }
 
-        SETUP_CHANCE();
-        DECLARE_BSTRINGS(value);
+        SETUP_COMMON;
+        B_DECLARE(value);
         GENLIST_FOREACH (dict, struct kv_pair *, ent) {
                 switch (ent->attr_type) {
-                HANDLE_CHANCE();
+                HANDLE_COMMON;
                 case XS_ATTR_VALUE: value = ent->val; break;
                 case XS_ATTR_UNKNOWN:
                 default:
@@ -806,10 +764,9 @@ parse_attributes(xs_context *ctx)
                 ent->val            = ((i+1) < ctx->attributes->qty)
                                       ? ctx->attributes->lst[i+1] : NULL;
 
-                struct attribute_identity tmp = { *ent->key, 0 };
-                struct attribute_identity *id = bsearch(
-                    &tmp, attr_ids, ARRSIZ(attr_ids),
-                    sizeof(struct attribute_identity), attr_ids_cb);
+                attribute_identity *id = bsearch(
+                    &(attribute_identity){*ent->key, 0}, attr_ids,
+                    ARRSIZ(attr_ids), sizeof(attribute_identity), attr_ids_cb);
 
                 ent->attr_type = (id) ? id->id : XS_ATTR_UNKNOWN;
                 genlist_append(dict, ent);
@@ -819,7 +776,7 @@ parse_attributes(xs_context *ctx)
 }
 
 static void
-add_with_chance(bstring *strp, bstring *chance, const int mask)
+add_with_chance(bstring *str, bstring *chance, const int mask)
 {
         if (chance) {
                 bstring *name;
@@ -832,31 +789,31 @@ add_with_chance(bstring *strp, bstring *chance, const int mask)
 
                 if (mask & CHANCE_SEMICOLON) {
                         if (mask & CHANCE_BRACE)
-                                b_sprintfa(strp, " %s (%s); {", name, chance);
+                                b_sprintfa(str, " %s (%s); {", name, chance);
                         else
-                                b_sprintfa(strp, " %s (%s);", name, chance);
+                                b_sprintfa(str, " %s (%s);", name, chance);
                 } else {
                         if (mask & CHANCE_BRACE)
-                                b_sprintfa(strp, " %s (%s) {", name, chance);
+                                b_sprintfa(str, " %s (%s) {", name, chance);
                         else
-                                b_sprintfa(strp, " %s (%s)", name, chance);
+                                b_sprintfa(str, " %s (%s)", name, chance);
                 }
         } else {
                 if (mask & CHANCE_SEMICOLON) {
                         if (mask & CHANCE_BRACE)
-                                b_catlit(strp, "; {");
+                                b_catlit(str, "; {");
                         else
-                                b_catlit(strp, ";");
+                                b_catlit(str, ";");
                 } else {
                         if (mask & CHANCE_BRACE)
-                                b_catlit(strp, " {");
+                                b_catlit(str, " {");
                 }
 
         }
 }
 
 
-static void
+static inline void
 add_comment(bstring *str, bstring *comment)
 {
         if (comment)

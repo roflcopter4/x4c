@@ -48,8 +48,6 @@ struct str_and_tag {
 %token OP_FILTER    ">>"
 %token OP_ARROW     "=>"
 %token TOK_ADD      "add"
-%token TOK_SUBTRACT "subtract"
-%token TOK_INSERT   "insert"
 %token TOK_BREAK    "break"
 %token TOK_CHANCE   "chance"
 %token TOK_DEBUG    "debug"
@@ -58,20 +56,22 @@ struct str_and_tag {
 %token TOK_FOR      "for"
 %token TOK_IF       "if"
 %token TOK_IN       "in"
+%token TOK_INSERT   "insert"
+%token TOK_IS       "is"
+%token TOK_ISNOT    "isnot"
 %token TOK_LET      "let"
+%token TOK_LIST     "list"
+%token TOK_NOT      "not"
 %token TOK_NULL     "NULL"
+%token TOK_RANGE    "range"
 %token TOK_RETURN   "return"
+%token TOK_REVERSED "reversed"
+%token TOK_SUBTRACT "subtract"
+%token TOK_TABLE    "table"
 %token TOK_THEN     "then"
 %token TOK_UNDEF    "undef"
-%token TOK_WHILE    "while"
-%token TOK_REVERSED "reversed"
-%token TOK_TABLE    "table"
-%token TOK_IS       "is"
-%token TOK_NOT      "not"
-%token TOK_ISNOT    "isnot"
-%token TOK_LIST     "list"
-%token TOK_RANGE    "range"
 %token TOK_WEIGHT   "weight"
+%token TOK_WHILE    "while"
 %token BLANK_LINE
 %token <int> TOK_TYPEOF
 
@@ -82,13 +82,13 @@ struct str_and_tag {
 %token <bstring *> LINE_COMMENT      "line_comment"
 %token <bstring *> TIME_VAL          "time value"
 %token <bstring *> TOK_CONST         "global_constant"
-%token <bstring *> TOK_EMPTY_ARRAY   "[]"
-%token <bstring *> TOK_SQRT          "sqrt"
-%token <bstring *> TOK_DISTANCE      "distance value"
-%token <bstring *> VARIABLE          "$variable"
 %token <bstring *> TOK_CREDITS       "credit value"
 %token <bstring *> TOK_DEGREES       "degree value"
+%token <bstring *> TOK_DISTANCE      "distance value"
+%token <bstring *> TOK_EMPTY_ARRAY   "[]"
 %token <bstring *> TOK_HEALTH        "literal hp"
+%token <bstring *> TOK_SQRT          "sqrt"
+%token <bstring *> VARIABLE          "$variable"
 
 %token <const char *> TOK_MAX "max"
 %token <const char *> TOK_MIN "min"
@@ -109,10 +109,10 @@ struct str_and_tag {
                      unary_expression identifier_terminal tern
                      debug_print_statement relational_expression terminal
                      expression primary_expression builtin_function 
-                     identifier keyword_clash optional_expression //optional_identifier_in 
+                     identifier keyword_clash optional_expression
                      struct_assignment table_assignment table_expression
                      list_expression range_profile
-%type <int>          unary_op multiplicative_op additive_op //reversed
+%type <int>          unary_op multiplicative_op additive_op
 %type <const char *> relational_op logical_op post_op
 %type <struct if_expression> if_expression
 %type <struct str_and_tag> identity
@@ -130,20 +130,7 @@ struct str_and_tag {
 <int>       TOK_VAL
 
 /* These associations are required to avoid conflicts. */
-/* %left '+' '-' */
-/* %left '*' '/' '%' */
-%left  ','
-/* %right '!' */
-/* %nonassoc '(' ')' '[' ']' '{' '}' */
-/* %nonassoc '+' '-' '*' '/' '%' '^' '$' ';'  '@' */
-/* %right '.' */
-/* %nonassoc "is" */
-/* %right '?' TOK_CR TOK_CT TOK_KM TOK_MS TOK_HP TOK_MIN TOK_MAX */
-/* %right ':' */
-/* %nonassoc OP_AND OP_OR OP_GT OP_LT OP_LE OP_GE '<' '>' */
-/* %nonassoc "in" */
-/* %nonassoc '=' */
-/* %nonassoc   "if" "else" "then" */
+%left ','
 
 %start statement_list;
 
@@ -223,13 +210,11 @@ unknown_statement
 /* Assignment */
 
 assignment_statement
-	: "let" identifier optional_expression           { new_assignment_statement(data, $2, $3, ASSIGNMENT_NORMAL); }
-	| "let" identifier '=' '{' struct_assignment '}' { new_assignment_statement(data, $2, $5, ASSIGNMENT_SPECIAL); }
-	/* | "let" identifier '=' table_expression          { new_assignment_statement(data, $2, $4, ASSIGNMENT_NORMAL); } */
-	/* | "let" identifier '=' list_expression           { new_assignment_statement(data, $2, $4, ASSIGNMENT_LIST); } */
-	| "add" identifier optional_expression           { new_assignment_statement(data, $2, $3, ASSIGNMENT_ADD); }
+	: "let"      identifier '=' '{' struct_assignment '}' { new_assignment_statement(data, $2, $5, ASSIGNMENT_SPECIAL); }
+	| "let"      identifier optional_expression           { new_assignment_statement(data, $2, $3, ASSIGNMENT_NORMAL); }
+	| "add"      identifier optional_expression           { new_assignment_statement(data, $2, $3, ASSIGNMENT_ADD); }
 	| "subtract" identifier optional_expression      { new_assignment_statement(data, $2, $3, ASSIGNMENT_SUBTRACT); }
-	| "insert" identifier optional_expression        { new_assignment_statement(data, $2, $3, ASSIGNMENT_INSERT); }
+	| "insert"   identifier optional_expression        { new_assignment_statement(data, $2, $3, ASSIGNMENT_INSERT); }
 	;
 
 optional_expression : '=' expression { $$ = $2; } | %empty { $$ = NULL; } ;
@@ -246,7 +231,6 @@ table_assignment
 	;
 
 list_expression
-	/* : "list" "[]"                    { $$ = b_fromlit("list[]"); } */
 	: "list" '[' expression_list ']' { $$ = b_sprintf("list[%s]", $3); b_free($3); }
 	| "list" '(' identifier ')' { $$ = b_sprintf("##list##%s", $3); b_free($3); }
 	;
@@ -472,46 +456,6 @@ logical_op        : OP_AND { $$ = "and"; } | OP_OR { $$ = "or"; } ;
 /*======================================================================================*/
 
 #if 0
-identifier
-	: identifier '.' primary_expression2 { $$ = $1; b_catchar($$, '.'); b_concat($$, $3); b_free($3); }
-	| primary_expression2
-	;
-
-primary_expression2
-	: primary_expression2 logical_op relational_expression2
-		{ $$ = $1; B_CONCAT($$, $2); B_CONCAT($$, $3); b_free($3); }
-	| relational_expression2 { $$ = $1; }
-	;
-
-relational_expression2
-	: relational_expression2 relational_op additive_expression2
-		{ $$ = $1; B_CONCAT($$, $2); B_CONCAT($$, $3); b_free($3); }
-	| additive_expression2 { $$ = $1; }
-	;
-
-additive_expression2
-	: additive_expression2 additive_op multiplicative_expression2
-		{ $$ = $1; B_CONCAT($$, $2); B_CONCAT($$, $3); b_free($3); }
-	| multiplicative_expression2 { $$ = $1; }
-	;
-
-multiplicative_expression2
-	: multiplicative_expression2 multiplicative_op unary_expression2
-		{ $$ = $1; B_CONCAT($$, $2); B_CONCAT($$, $3); b_free($3); }
-	| unary_expression2 { $$ = $1; }
-	;
-
-unary_expression2
-	: unary_op unary_expression2 { $$ = handle_unary_op($1, $2); }
-	| terminal2 { $$ = $1; }
-	;
-
-terminal2
-	: '(' expression ')' inexplicable_f  { $$ = $2; b_insert_char($$, 0, $1); b_catchar($$, $3); if ($4) b_catcstr($$, $4); }
-	| IDENTIFIER
-	| VARIABLE
-	| terminal2 '?'        { $$ = $1; b_catchar($$, '?'); }
-	;
 #endif
 
 static void

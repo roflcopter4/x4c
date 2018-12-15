@@ -111,11 +111,9 @@ struct ast_node {
                         bool     reversed;
                 } forstmt;
                 struct {
-                        bstring *counter;
-                        bstring *min;
-                        bstring *max;
-                        bstring *prof;
-                        bool     reversed;
+                        bstring         *counter;
+                        struct xs_range *rng;
+                        bool             reversed;
                 } for_range_stmt;
         };
         enum ast_node_types type;

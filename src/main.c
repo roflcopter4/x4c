@@ -37,7 +37,7 @@ main(int argc, char **argv)
         }
 
         free(out_fname);
-        exit(EXIT_SUCCESS);
+        return 0;
 }
 
 static int
@@ -58,12 +58,11 @@ handle_options(int argc, char **argv)
         return (optind - 1);
 }
 
-static void
+static noreturn void
 show_help(const int status)
 {
         printf("Usage: %s -[%s] [filename]\n"
                "If no filename is given data is read from the standard input.\n"
-               "All output is to the standard output.\n"
                "One of the options '-d' or '-c' is required.\n"
                "Options:\n"
                "  o, output:    Set output filename (default stdout)\n"
