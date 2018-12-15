@@ -1,0 +1,52 @@
+
+Description="x4c"
+
+--[[==============================================================================
+                                        CHANGELOG                                     
+==================================================================================
+  (2018/12/4 | Highlight v3.42)
+--]]
+
+
+--TODO handle '
+Identifiers=[[ [a-zA-Z_][\-a-zA-Z_0-9]* ]]
+
+Keywords={
+  { Id=1,
+    List={"if", "else", "elsif", "while", "for", "do", "return", "break", "in",
+          "eq", "ne", "lt", "gt", "ge", "le", "not", "and", "or", "with",
+          "chance", "reversed", "let", "undef", "add", "subtract", "insert",
+          "debug", "debugchance", "is", "then", "isnot"},
+  },
+  { Id=2,
+    Regex=[[ [$][^(\s|\.|\-\>|\"|\'|\(|\[|\)|\]|\{|\}|\>|\<|\?)]+ ]],
+  },
+  { Id=3,
+    List={"this", "class", "player", "order", "orderstate", "faction",
+          "attention", "event", "command", "NULL", "table", "true", "false",
+          "Manager"},
+  },
+  { Id=4,
+	Regex=[[\.([a-zA-Z0-9_]+)]],
+  },
+}
+
+IgnoreCase=false
+
+Comments = {
+   { Block=true,
+     Nested=false,
+     Delimiter = { [[\/\*]], [[\*\/]] }
+   },
+   {
+     Block=false,
+     Delimiter = { [[//]] }
+   }
+}
+
+--todo for 1..5
+Operators=[[\(|\)|\[|\]|\{|\}|\,|\;|\:|\&|<|>|\!|\@|\=|\/|\*|\+|\-|\$|\.|\%|\||\?]]
+
+Strings = {
+  Delimiter=[["|']],
+}
